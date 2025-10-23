@@ -27,6 +27,6 @@ export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$PKG_CONFIG_SYSROOT_DIR"
 # Download riscv64-linux-musl-cross.tgz from https://musl.cc/#binaries and extract to $HOME/riscv64-linux-musl-cross/bin
 export PATH="$PATH:$HOME/riscv64-linux-musl-cross/bin"
 export SLINT_BACKEND_LINUXFB=1
-SLINT_BACKEND_LINUXFB=1 cargo build --features "slint/backend-linuxkms-noseat,slint/renderer-software,slint/compat-1-2" --target riscv64gc-unknown-linux-musl --release
+SLINT_BACKEND_LINUXFB=1 cargo build --no-default-features --features "slint/backend-linuxkms-noseat,slint/renderer-software,slint/compat-1-2" --target riscv64gc-unknown-linux-musl --release
 # SLINT_BACKEND_LINUXFB=1 cargo build --target riscv64gc-unknown-linux-musl --release
 # cargo run --features "slint/feature1,slint/feature2"
