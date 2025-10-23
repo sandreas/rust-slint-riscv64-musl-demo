@@ -1,0 +1,27 @@
+[package]
+name = "rust-slint-riscv64-musl-demo"
+version = "0.1.0"
+edition = "2024"
+build = "build.rs"
+repository = "https://github.com/pilabor/resonance"
+
+
+[dependencies.slint]
+version = "1.14.1" # or your desired version
+# for riscv64 compilation, does not work on ArchLinux
+# features = ["backend-linuxkms-noseat", "renderer-software", "compat-1-2"]
+# default-features = false
+
+[build-dependencies]
+slint-build = "1.14.1"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = "z"       # Optimize for binary size
+strip = true          # Automatically strip symbols from the binary
+debug = true          # debug information
+lto = true            # Enable Link Time Optimization
+codegen-units = 1     # Optimize for single codegen unit (better performance)
+panic = 'abort'       # Abort on panic (smaller binary size)

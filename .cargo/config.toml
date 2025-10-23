@@ -1,0 +1,3 @@
+[target.riscv64gc-unknown-linux-musl]
+linker = "riscv64-linux-musl-gcc"
+rustflags = ["-C", "link-arg=--sysroot=/home/andreas/projects/scpcom/LicheeSG-Nano-Build/buildroot/output/cvitek_SG200X_musl_riscv64/host/riscv64-buildroot-linux-musl/sysroot"]
