@@ -20,6 +20,8 @@ in `Cross.toml`. Until that is done, you won't be able to build this project wit
     # Now take 32769 * 512 = 16777728 to mount the device
     sudo mkdir /mnt/lichee
     sudo mount -o loop,offset=16777728 licheervnano-e_sd.img /mnt/lichee
+    cd /mnt/lichee/
+    tar -czvf /tmp/usr-lib.tar.gz usr/lib
     ```
     
 - Work in progress - 
