@@ -6,11 +6,12 @@ image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local" # ghcr.io/cross-rs
 linker = "riscv64-linux-gnu-gcc"
 rustflags = ["-C", "link-args=-static"]
 
-pre-build = [
-     "curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
-     "tar -xzf /tmp/usr-lib.tar.gz -C /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
-    "chown -R crosstool:crosstool /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
-]
+#pre-build = [
+     #"curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
+     #"tar -xzf /tmp/usr-lib.tar.gz -C /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
+
+    #"chown -R crosstool:crosstool /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
+#]
 
 # libudev1 libudev-dev
 # libinput-bin libinput-dev libinput10
