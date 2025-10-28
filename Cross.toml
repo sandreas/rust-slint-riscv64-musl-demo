@@ -7,15 +7,9 @@ linker = "riscv64-linux-gnu-gcc"
 rustflags = ["-C", "link-args=-static"]
 
 pre-build = [
-#     "mkdir /opt/riscv",
-#     "curl -L -o /tmp/musl-cross.tar.gz https://musl.cc/riscv64-linux-musl-cross.tgz",
-#     "tar -xzf /tmp/musl-cross.tar.gz -C /opt/riscv",
-#     "ln -s  /opt/riscv/riscv64-linux-musl-cross/bin/riscv64-linux-musl-g++ /usr/bin/riscv64-linux-musl-g++",
-    "apt update && apt install libudev1 libudev-dev",
      "curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
      "tar -xzf /tmp/usr-lib.tar.gz -C /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
     "chown -R crosstool:crosstool /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
-    "ln -s /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/* /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/lib/ || true"
 ]
 
 # libudev1 libudev-dev
