@@ -9,9 +9,9 @@ repository = "https://github.com/pilabor/resonance"
 [dependencies.slint]
 version = "1.14.1" # or your desired version
 # for riscv64 compilation, does not work on ArchLinux
-# features = ["backend-linuxkms-noseat", "renderer-software", "compat-1-2"]
+features = ["backend-linuxkms-noseat", "renderer-software", "compat-1-2"]
 # features = ["renderer-femtovg", "backend-linuxkms-noseat", "compat-1-2"]
-# default-features = false
+default-features = false
 
 [build-dependencies]
 slint-build = "1.14.1"

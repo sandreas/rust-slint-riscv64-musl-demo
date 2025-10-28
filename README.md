@@ -4,24 +4,30 @@ A demo for rust slint on riscv64 musl
 # How to build for LicheeRV Nano
 
 IMPORTANT: Currently, the build requires a custom docker image  `ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local`, 
-which has to be build manually and requires a lot of steps. I'm working on replacing this with a `pre-build = []` step
-in `Cross.toml`. Until that is done, you won't be able to build this project without the custom image.
+which has to be build manually - there is no working official docker image to pull directly:
+
+```
+git clone https://github.com/sandreas/cross.git
+cd cross
+./build-docker.sh
+```
 
 
-- Download LicheeRV Nano release from scpcom: https://github.com/scpcom/LicheeSG-Nano-Build/releases/download/v2.2.9-22/licheervnano-e_sd.img.xz
-- Extract the image to `licheervnano-e_sd.img`
-- Mount the image
-  - ```bash
-    fdisk -lu licheervnano-e_sd.img
-    # Device                             Boot Start     End Sectors   Size Kn Type
-    # licheervnano-e_sd-2025-10-26.img1 *         1   32768    32768   16M  c W95 FAT3
-    # licheervnano-e_sd-2025-10-26.img2       32769 3309568  3276800  1,6G 83 Linux
-    
-    # Now take 32769 * 512 = 16777728 to mount the device
-    sudo mkdir /mnt/lichee
-    sudo mount -o loop,offset=16777728 licheervnano-e_sd.img /mnt/lichee
-    cd /mnt/lichee/
-    tar -czvf /tmp/usr-lib.tar.gz usr/lib
-    ```
-    
-- Work in progress - 
+ This takes a while. After building successfully, you should have the required image on your machine:
+
+```
+> docker images                                                                                                                                                                         🕰 32m36s766ms  | 15:00:37
+REPOSITORY                                      TAG                                            IMAGE ID       CREATED          SIZE
+ghcr.io/cross-rs/riscv64gc-unknown-linux-musl   local                                          8229b26cdce6   58 minutes ago   3.06GB
+```
+
+
+Does not work:
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/libudev.so.1
+
+Does work:
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/python3.12/site-packages/pyudev/_ctypeslib/libudev.py
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/python3.12/site-packages/pyudev/_ctypeslib/__pycache__/libudev.cpython-312.pyc
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/libudev.so
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/libudev.so.1.6.3
+./riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/libudev.so.1

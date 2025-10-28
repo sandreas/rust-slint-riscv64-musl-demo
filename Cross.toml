@@ -1,32 +1,22 @@
-# Copyright © SixtyFPS GmbH <info@slint.dev>
-# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-
-[target.aarch64-unknown-linux-gnu]
-image = "ghcr.io/slint-ui/slint/aarch64-unknown-linux-gnu"
-[target.armv7-unknown-linux-gnueabihf]
-image = "ghcr.io/slint-ui/slint/armv7-unknown-linux-gnueabihf"
-[target.riscv64gc-unknown-linux-gnu]
-image = "ghcr.io/slint-ui/slint/riscv64gc-unknown-linux-gnu"
-[target.x86_64-unknown-linux-gnu]
-image = "ghcr.io/slint-ui/slint/x86_64-unknown-linux-gnu"
-
-
 # debug via docker run -it ghcr.io/rust-cross/rust-musl-cross:riscv64gc-unknown-linux-musl /bin/bash
 # image = "ghcr.io/rust-cross/rust-musl-cross:riscv64gc-unknown-linux-musl"
 # image = "messense/rust-musl-cross:riscv64gc-musl"
 [target.riscv64gc-unknown-linux-musl]
-image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local"
+image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local" # ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:edgefin
 linker = "riscv64-linux-gnu-gcc"
 rustflags = ["-C", "link-args=-static"]
 
-# pre-build = [
+pre-build = [
 #     "mkdir /opt/riscv",
 #     "curl -L -o /tmp/musl-cross.tar.gz https://musl.cc/riscv64-linux-musl-cross.tgz",
 #     "tar -xzf /tmp/musl-cross.tar.gz -C /opt/riscv",
 #     "ln -s  /opt/riscv/riscv64-linux-musl-cross/bin/riscv64-linux-musl-g++ /usr/bin/riscv64-linux-musl-g++",
-#     "curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
-#     "tar -xzf /tmp/usr-lib.tar.gz -C /"
-# ]
+    "apt update && apt install libudev1 libudev-dev",
+     "curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
+     "tar -xzf /tmp/usr-lib.tar.gz -C /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
+    "chown -R crosstool:crosstool /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
+    "ln -s /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/usr/lib/* /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/lib/ || true"
+]
 
 # libudev1 libudev-dev
 # libinput-bin libinput-dev libinput10
