@@ -1,23 +1,10 @@
-# debug via docker run -it ghcr.io/rust-cross/rust-musl-cross:riscv64gc-unknown-linux-musl /bin/bash
-# image = "ghcr.io/rust-cross/rust-musl-cross:riscv64gc-unknown-linux-musl"
-# image = "messense/rust-musl-cross:riscv64gc-musl"
 [target.riscv64gc-unknown-linux-musl]
-image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local" # ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:edgefin
+image = "sandreas/cross-riscv64-linux-musl" #""ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:local" # ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:edgefin
 linker = "riscv64-linux-gnu-gcc"
 rustflags = ["-C", "link-args=-static"]
 
 #pre-build = [
-     #"curl -L -o /tmp/usr-lib.tar.gz https://github.com/sandreas/rust-slint-riscv64-musl-demo/releases/download/usr-lib/usr-lib.tar.gz",
-     #"tar -xzf /tmp/usr-lib.tar.gz -C /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
-
-    #"chown -R crosstool:crosstool /x-tools/riscv64-unknown-linux-musl/riscv64-unknown-linux-musl/sysroot/",
 #]
-
-# libudev1 libudev-dev
-# libinput-bin libinput-dev libinput10
-# libxkbcommon0 libxkbcommon-dev
-# libgbm1 libgbm-dev
-# libudev1 libudev-dev libinput-bin libinput-dev libinput10 libxkbcommon0 libxkbcommon-dev libgbm1 libgbm-dev
 
 [build.env]
 passthrough = [
