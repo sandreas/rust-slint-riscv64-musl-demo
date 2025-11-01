@@ -8,10 +8,9 @@ repository = "https://github.com/pilabor/resonance"
 
 [dependencies.slint]
 version = "1.14.1" # or your desired version
-# for riscv64 compilation, does not work on ArchLinux
+# software renderer is mandatory for riscv64 compilation but also works on ArchLinux
 features = ["backend-linuxkms-noseat", "renderer-software", "compat-1-2"]
-# features = ["renderer-femtovg", "backend-linuxkms-noseat", "compat-1-2"]
-default-features = false
+#default-features = false
 
 [build-dependencies]
 slint-build = "1.14.1"
@@ -26,3 +25,5 @@ debug = true          # debug information
 lto = true            # Enable Link Time Optimization
 codegen-units = 1     # Optimize for single codegen unit (better performance)
 panic = 'abort'       # Abort on panic (smaller binary size)
+[dependencies]
+awedio = "0.5.0"

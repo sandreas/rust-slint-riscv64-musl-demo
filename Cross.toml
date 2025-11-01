@@ -6,6 +6,10 @@ rustflags = ["-C", "link-args=-static"]
 #pre-build = [
 #]
 
+pre-build = [
+    "apt-get install -y --no-install-recommends libasound2-dev"
+]
+
 [build.env]
 passthrough = [
     "PKG_CONFIG_ALLOW_CROSS=1",

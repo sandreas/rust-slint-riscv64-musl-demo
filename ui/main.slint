@@ -1,6 +1,49 @@
+import { Button, VerticalBox } from "std-widgets.slint";
+
 export component MainWindow inherits Window {
-    Text {
-        text: "hello world";
-        color: green;
+    callback run_code_callback(string);
+    // full-screen: true;
+    default-font-size: 12pt;
+    width: 368px;
+    height: 552px;
+    GridLayout {
+        spacing: 5px;
+        Row {
+            label := Text {
+                text: " - ";
+            }
+        }
+        Row {
+            Button {
+                text: "Sine";
+                clicked => {
+                    root.run_code_callback("sine");
+                    label.text = "Sine clicked";
+                }
+            }
+            Button {
+                text: "/tmp/test.wav";
+                clicked => {
+                    root.run_code_callback("wav");
+                    label.text = "wav clicked";
+                }
+            }
+        }
+        Row {
+            Button {
+                text: "/tmp/test.mp3";
+                clicked => {
+                    root.run_code_callback("mp3");
+                    label.text = "mp3 clicked";
+                }
+            }
+            Button {
+                text: "/tmp/test.m4b";
+                clicked => {
+                    root.run_code_callback("m4b");
+                    label.text = "m4b clicked";
+                }
+            }
+        }
     }
 }
