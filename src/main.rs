@@ -28,12 +28,12 @@ fn main() -> Result<(), slint::PlatformError> {
                 if let Ok(name) = d.name() {
                     // ALSA device names may include "hw:2,0" or "hw-2-0"
                     // You might need to tune this filter depending on your device naming
-                    println!("device: {} contains {}?", name, name.contains("sysdefault:CARD=A"));
+                    println!("device: {} contains {}: {}", name, "sysdefault:CARD=A", name.contains("sysdefault:CARD=A"));
                     name.contains("sysdefault:CARD=A")
                 } else {
                     false
                 }
-            }).ok_or("no device found"));
+            })).unwrap();
 
 
         if device.is_some() {
@@ -41,7 +41,11 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     }
 
-    let selected_device = device.unwrap()?;
+    if !device.is_some() {
+        device = Some(host.default_output_device().unwrap());
+    }
+
+    let selected_device = device.unwrap();
     let default_config = selected_device.default_output_config().ok().unwrap();
     let sample_rate = default_config.sample_rate().0;
     let channel_count = default_config.channels();
