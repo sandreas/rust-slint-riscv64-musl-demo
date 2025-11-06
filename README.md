@@ -9,6 +9,11 @@ A demo for rust slint on riscv64 musl
 - [Sipeed LicheeRV Nano](https://wiki.sipeed.com/hardware/en/lichee/RV_Nano/1_intro.html)
 - [Sitronix(?) LHCM228TS003A 2.28" Touch Display](https://b2b.baidu.com/land?id=39559f991fdef58e6c72b9f770bae1d810)
 - [Apple USB-C to 3.5 mm Headphone Jack Adapter](https://www.apple.com/shop/product/mw2q3am/a/usb-c-to-35-mm-headphone-jack-adapter)
+- Optional: [TP4057 Battery charger board](https://makerselectronics.com/product/lithium-battery-charger-discharge-module-tp4057-lx-lbc3-type-c-usb-1a/)
+
+To connect the USB-Audio Adapter AND power the device, you need to supply power to the VSYS and GND Pin, because you can
+not use USB to power the device. 
+CAUTION: You need to supply 5V, the LicheeRV Nano is pretty picky about to high voltages, so be careful.
 
 ## Firmware-Image
 
