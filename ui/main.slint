@@ -1,9 +1,14 @@
 import { Button, VerticalBox } from "std-widgets.slint";
 
+export global Settings {
+    in-out property<bool> fullscreen: false;
+}
+
+
 export component MainWindow inherits Window {
     callback run_code_callback(string);
-    // full-screen: true;
-    default-font-size: 12pt;
+    full-screen: Settings.fullscreen;
+    default-font-size: 50pt;
     width: 368px;
     height: 552px;
     GridLayout {
