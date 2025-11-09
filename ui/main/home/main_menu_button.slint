@@ -1,0 +1,18 @@
+import { Button, VerticalBox, ScrollView, HorizontalBox } from "std-widgets.slint";
+
+export component MainMenuButton {
+    in property <image> image;
+    in property <string> text;
+    callback clicked();
+    VerticalBox {
+        Image {
+            width: 150px;
+            height: 150px;
+            source: image;
+        }
+        Text {
+            horizontal-alignment: center;
+            text: text;
+        }
+    }
+}

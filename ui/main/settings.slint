@@ -1,0 +1,17 @@
+import { Switch, VerticalBox, HorizontalBox, Palette } from "std-widgets.slint";
+
+
+export component Settings {
+    VerticalBox {
+        HorizontalBox {
+            Switch {
+                horizontal-stretch: 0;
+                text: @tr("Dark Mode");
+                checked: Palette.color-scheme == ColorScheme.dark;
+                toggled => {
+                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
+                }
+            }
+        }
+    }
+}
