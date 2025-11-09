@@ -1,26 +1,97 @@
-import { Palette, ScrollView, Button } from "std-widgets.slint";
+import { Button, HorizontalBox, Palette, ScrollView, VerticalBox  } from "std-widgets.slint";
 
-import { Home } from "./main/home.slint";
 import { Audiobooks } from "./main/audiobooks.slint";
 import { Music } from "./main/music.slint";
+import { Search } from "./main/search.slint";
 import { Settings } from "./main/settings.slint";
-
 
 export enum Route {
     home,
     audiobooks,
     music,
+    search,
     settings
 }
 
-
-export global Preferences {
-    in-out property<bool> fullscreen: false;
+export global Icons {
+    in-out property<image> audiobooks: @image-url("images/icons/audiobooks.svg");
+    in-out property<image> music: @image-url("images/icons/music.svg");
+    in-out property<image> search: @image-url("images/icons/search.svg");
+    in-out property<image> settings: @image-url("images/icons/settings.svg");
 }
 
 export global Navigation {
     in-out property <Route> route: Route.home;
     callback goto(Route);
+}
+
+export global Preferences {
+    in-out property<bool> fullscreen: false;
+}
+
+
+export component MainMenuButton {
+    in property <Route> route;
+    in property <image> image;
+    in property <string> text;
+    callback clicked();
+    TouchArea {
+        clicked => {
+            Navigation.goto(route);
+        }
+        VerticalBox {
+            Image {
+               source: image;
+               width: 150px;
+               height: 150px;
+            }
+            Text {
+                horizontal-alignment: center;
+                text: text;
+            }
+
+        }
+    }
+}
+
+export component Home {
+    callback navigateTo(string);
+
+    VerticalBox {
+            alignment: start;
+            HorizontalBox {
+                alignment: center;
+                MainMenuButton {
+                    image: Icons.audiobooks;
+                    route: Route.audiobooks;
+                    text: "Books";
+                    clicked() => {
+                        navigateTo("books");
+                    }
+                }
+
+                MainMenuButton {
+                    image: Icons.music;
+                    route: Route.music;
+                    text: "Music";
+                }
+            }
+
+            HorizontalBox {
+                alignment: center;
+                MainMenuButton {
+                    image: Icons.search;
+                    route: Route.search;
+                    text: "Search";
+                }
+                MainMenuButton {
+                    image: Icons.settings;
+                    route: Route.settings;
+                    text: "Settings";
+                }
+            }
+
+        }
 }
 
 export component MainWindow inherits Window {
@@ -35,11 +106,7 @@ export component MainWindow inherits Window {
        if Navigation.route == Route.audiobooks : Audiobooks { }
        if Navigation.route == Route.music : Music { }
        if Navigation.route == Route.settings : Settings { }
-       Button {
-            text: "Hello";
-           clicked => {
-                Navigation.goto(Route.settings)
-           }
-       }
+       if Navigation.route == Route.search : Search { }
+
    }
 }

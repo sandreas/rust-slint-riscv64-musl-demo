@@ -9,13 +9,14 @@ fn main() -> Result<(), slint::PlatformError> {
 
     let ui = MainWindow::new()?;
     // ui.window().set_fullscreen(true);
+    /*
     let globals = MainWindow::global::<Preferences>(&ui);
     for argument in std::env::args() {
         if argument == "--fullscreen" {
             globals.set_fullscreen(true);
         }
     }
-
+    */
     let host = cpal::default_host();
 
     let mut device = None;
