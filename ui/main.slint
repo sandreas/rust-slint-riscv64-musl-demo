@@ -152,6 +152,7 @@ component Settings {
 }
 
 export component MainWindow inherits Window {
+    in-out property <physical-length> swipe-area-width: 50px;
 
     // 368 x 552
     preferred-width: 368px;
@@ -162,14 +163,15 @@ export component MainWindow inherits Window {
         // restore route
     }
 
-    SwipeGestureHandler {
-        handle-swipe-right: true;
-        handle-swipe-left: true;
-        swiped => {
-            if self.current-position.x > self.pressed-position.x + self.width / 4 {
+        SwipeGestureHandler {
+            x: 0;
+            y: 0;
+            width:swipe-area-width;
+            height:100%;
+            handle-swipe-right: true;
+            handle-swipe-left: false;
+            swiped => {
                 Navigation.back()
-            } else if self.current-position.x < self.pressed-position.x - self.width / 4 {
-                Navigation.forward();
             }
         }
         VerticalBox {
@@ -195,8 +197,16 @@ export component MainWindow inherits Window {
                 if Navigation.route[0] == "search": Search { }
             }
         }
-
-    }
-
+        SwipeGestureHandler {
+            x: root.width - swipe-area-width;
+            y: 0;
+            width:swipe-area-width;
+            height:100%;
+            handle-swipe-right: false;
+            handle-swipe-left: true;
+            swiped => {
+                Navigation.forward()
+            }
+        }
 
 }
