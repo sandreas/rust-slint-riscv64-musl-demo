@@ -1,17 +1,4 @@
-import { Button, HorizontalBox, Palette, ScrollView, VerticalBox  } from "std-widgets.slint";
-
-import { Audiobooks } from "./main/audiobooks.slint";
-import { Music } from "./main/music.slint";
-import { Search } from "./main/search.slint";
-import { Settings } from "./main/settings.slint";
-
-export enum Route {
-    home,
-    audiobooks,
-    music,
-    search,
-    settings
-}
+import { Button, HorizontalBox, Palette, ScrollView, Slider, Switch, VerticalBox  } from "std-widgets.slint";
 
 export global Icons {
     in-out property<image> audiobooks: @image-url("images/icons/audiobooks.svg");
@@ -20,78 +7,123 @@ export global Icons {
     in-out property<image> settings: @image-url("images/icons/settings.svg");
 }
 
-export global Navigation {
-    in-out property <Route> route: Route.home;
-    callback goto(Route);
-}
-
 export global Preferences {
     in-out property<bool> fullscreen: false;
 }
 
+export global Navigation {
+    in-out property <string> route: "home";
+    callback goto(string);
+}
 
-export component MainMenuButton {
-    in property <Route> route;
+export component Navigator inherits TouchArea {
+    in property <string> route;
+    clicked => {
+        Navigation.goto(route);
+    }
+ }
+
+
+// import { HomeButton } from "./home_button.slint";
+export component HomeButton inherits Navigator {
     in property <image> image;
     in property <string> text;
-    callback clicked();
-    TouchArea {
-        clicked => {
-            Navigation.goto(route);
+    VerticalBox {
+        Image {
+           source: image;
+           width: 150px;
+           height: 150px;
         }
-        VerticalBox {
-            Image {
-               source: image;
-               width: 150px;
-               height: 150px;
-            }
-            Text {
-                horizontal-alignment: center;
-                text: text;
-            }
+        Text {
+            horizontal-alignment: center;
+            text: text;
+        }
 
-        }
     }
 }
 
+// import { Home } from "./home.slint";
 export component Home {
-    callback navigateTo(string);
-
     VerticalBox {
             alignment: start;
             HorizontalBox {
                 alignment: center;
-                MainMenuButton {
+                HomeButton {
                     image: Icons.audiobooks;
-                    route: Route.audiobooks;
+                    route: "books";
                     text: "Books";
-                    clicked() => {
-                        navigateTo("books");
-                    }
                 }
 
-                MainMenuButton {
+                HomeButton {
                     image: Icons.music;
-                    route: Route.music;
+                    route: "music";
                     text: "Music";
                 }
             }
 
             HorizontalBox {
                 alignment: center;
-                MainMenuButton {
+                HomeButton {
                     image: Icons.search;
-                    route: Route.search;
+                    route: "settings";
                     text: "Search";
                 }
-                MainMenuButton {
+                HomeButton {
                     image: Icons.settings;
-                    route: Route.settings;
+                    route: "settings";
                     text: "Settings";
                 }
             }
 
         }
+}
+
+// import { Audiobooks } from "./main/audiobooks.slint";
+export component Audiobooks {
+    Text {
+        text: "Audiobooks";
+    }
+}
+
+export component Music {
+    Text {
+        text: "Music";
+    }
+}
+
+export component Search {
+    VerticalBox {
+        HorizontalBox {
+            Text {
+                text: "Search";
+            }
+        }
+    }
+}
+
+export component Settings {
+    VerticalBox {
+        HorizontalBox {
+            VerticalBox {
+                Slider {
+                    value: 0;
+                    minimum: 0;
+                    maximum: 2000;
+
+                    // changed(value) => {}
+
+                }
+            }
+            Switch {
+                horizontal-stretch: 0;
+                text: @tr("Dark Mode");
+                checked: Palette.color-scheme == ColorScheme.dark;
+                toggled => {
+                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
+                }
+            }
+        }
+    }
 }
 
 export component MainWindow inherits Window {
@@ -102,11 +134,10 @@ export component MainWindow inherits Window {
 
 
    ScrollView {
-       if Navigation.route == Route.home : Home { }
-       if Navigation.route == Route.audiobooks : Audiobooks { }
-       if Navigation.route == Route.music : Music { }
-       if Navigation.route == Route.settings : Settings { }
-       if Navigation.route == Route.search : Search { }
-
+       if Navigation.route == "home" : Home { }
+       if Navigation.route == "audiobooks" : Audiobooks { }
+       if Navigation.route == "music" : Music { }
+       if Navigation.route == "settings" : Settings { }
+       if Navigation.route == "search" : Search { }
    }
 }

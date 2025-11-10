@@ -155,7 +155,3 @@ fn main() -> Result<(), slint::PlatformError> {
  */
     ui.run()
 }
-
-fn update_route(p0: Route) {
-
-}

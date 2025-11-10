@@ -9,7 +9,7 @@ A demo for rust slint on riscv64 musl
 - [Sipeed LicheeRV Nano](https://wiki.sipeed.com/hardware/en/lichee/RV_Nano/1_intro.html)
 - [Sitronix(?) LHCM228TS003A 2.28" Touch Display](https://b2b.baidu.com/land?id=39559f991fdef58e6c72b9f770bae1d810)
 - [Apple USB-C to 3.5 mm Headphone Jack Adapter](https://www.apple.com/shop/product/mw2q3am/a/usb-c-to-35-mm-headphone-jack-adapter)
-- Optional: [TP4057 Battery charger board](https://makerselectronics.com/product/lithium-battery-charger-discharge-module-tp4057-lx-lbc3-type-c-usb-1a/)
+- Optional (Caution, 4.2V or 4.35V Versions won't work): [5V Version of TP4057 Battery charger board](https://makerselectronics.com/product/lithium-battery-charger-discharge-module-tp4057-lx-lbc3-type-c-usb-1a/)
 
 To connect the USB-Audio Adapter AND power the device, you need to supply power to the VSYS and GND Pin, because you can
 not use USB to power the device. 
@@ -63,3 +63,38 @@ cargo run
 ```
 
 That's it for now, more to come.
+
+
+# Goals
+- Create an Open Source audio player inspired by the iPod Nano 7g
+- Very tiny size (max 45x80x18mm)
+- At least 5h of battery / listening time
+- Not too challenging obtaining and assembling the hardware (beginner soldering skills, 3D printer access)
+- Easily Repairable (replaceable battery, microSD-Card, LCD and Board, 3D printable case)
+- Touchscreen controls including gestures (swipe, etc.)
+- Playback controls via headphone remote and push-buttons (tap / hold actions for volume, play, pause, next, previous, fast-forward, rewind)
+- Wifi and bluetooth connectivity 
+- Support for common formats (`flac`, `mp3`, `m4a/m4b`, `wav`)
+- Syncable audio database (don't do the file and metadata scanning on the device to save CPU, RAM and battery as well as not having to expose the microSD)
+- Desktop-deployable UI for easier development and testing (Linux / Rust / Slint based)
+- Later
+  - Support for Wifi sync
+  - Support for Bluetooth audio
+  - Support for WASM Plugins (see [zellij](https://zellij.dev/))
+
+# Challenges
+- Onscreen Keyboard on a tiny device (maybe voice input?)
+- 
+
+# Roadmap / Todo
+- [x] Find suitable Hardware (Board, Display, Audio)
+- [x] Compile and run basic test application in Rust / Slint
+- [ ] 3D Design a case for housing the components and a battery >= 1500mah
+- [ ] Implement the DAP software for the embedded device
+- [ ] Implement the Sync software for the Desktop / Mobile devices
+
+
+
+# Notes
+- Routing: https://github.com/slint-ui/slint/discussions/6783
+- Swipe: https://docs.slint.dev/latest/docs/slint/reference/gestures/swipegesturehandler/
