@@ -1,7 +1,10 @@
+use std::iter;
+use std::rc::Rc;
 use awedio::{backends, Sound};
-use slint::ComponentHandle;
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 slint::include_modules!();
 use awedio::backends::CpalBufferSize;
+use awedio::sounds::wrappers::AddSound;
 use cpal::traits::{DeviceTrait, HostTrait};
 
 
@@ -138,10 +141,75 @@ fn main() -> Result<(), slint::PlatformError> {
     });
 */
     let navigation = ui.global::<Navigation>();
-    let inner_ui = ui.clone_strong();
+    let goto_ui = ui.clone_strong();
     navigation.on_goto(move |value| {
-        inner_ui.global::<Navigation>().set_route(value);
+
+        goto_ui.global::<Navigation>().set_route(value);
+        let history_item = goto_ui.global::<Navigation>().get_route();
+        // inner_ui.global::<Navigation>().
+        // inner_ui.global::<Navigation>().set_history()
+
+        let mut next_index = goto_ui.global::<Navigation>().get_history_index() + 1;
+        let mut skip = 0;
+        if(next_index > 1000) {
+            skip = 1;
+            next_index = 1000;
+        }
+
+        let vec_of_history: Vec<ModelRc<SharedString>> = goto_ui.global::<Navigation>()
+            .get_history()
+            .iter()
+            .skip(skip)
+            .chain(iter::once(history_item)).collect();
+        let history = VecModel::from(vec_of_history);
+        goto_ui.global::<Navigation>().set_history(ModelRc::new(history));
+
+        goto_ui.global::<Navigation>().set_history_index(next_index);
+        /*
+        let model: Rc<VecModel<SharedString>> = Rc::new(VecModel::from(vec![
+            "Item 1".into(),
+            "Item 2".into(),
+            "Item 3".into(),
+        ]));
+*/
+        // Convert Rc<VecModel<_>> to ModelRc<_>
+        // let model_rc: ModelRc<SharedString> = ModelRc::from(model.clone());
+        // history.iter().skip(1)
+
+        // let history = inner_ui.global::<Navigation>().get_history();
+
     });
+
+    let back_ui = ui.clone_strong();
+    navigation.on_back(move || {
+        let current_index = back_ui.global::<Navigation>().get_history_index();
+        let vec_index = current_index as usize;
+        let vec_of_history: Vec<ModelRc<SharedString>> = back_ui.global::<Navigation>().get_history().iter().collect();
+        if current_index == 0 || vec_of_history.is_empty() {
+            return;
+        }
+        back_ui.global::<Navigation>().set_route(vec_of_history[vec_index-1].clone());
+        back_ui.global::<Navigation>().set_history_index(current_index-1);
+    });
+
+    let forward_ui = ui.clone_strong();
+    navigation.on_forward(move || {
+        let current_index = forward_ui.global::<Navigation>().get_history_index();
+        let vec_index = current_index as usize;
+        let vec_of_history: Vec<ModelRc<SharedString>> = forward_ui.global::<Navigation>().get_history().iter().collect();
+        if vec_of_history.len() < vec_index + 2 {
+            return;
+        }
+        forward_ui.global::<Navigation>().set_route(vec_of_history[vec_index+1].clone());
+        forward_ui.global::<Navigation>().set_history_index(current_index+1);
+    });
+
+    /*
+    navigation.on_back(move |value| {
+
+    });
+
+     */
 /*
     ui.on_run_code_callback(move |extension| {
         _ = Command::new("aplay")
@@ -154,4 +222,20 @@ fn main() -> Result<(), slint::PlatformError> {
 
  */
     ui.run()
+}
+
+
+// use slint::{ModelRc, VecModel, SharedString};
+
+fn convert_iterator_to_modelrc(
+    iter: impl Iterator<Item = ModelRc<SharedString>>,
+) -> ModelRc<ModelRc<SharedString>> {
+    // Collect items into a Vec
+    let vec_of_models: Vec<ModelRc<SharedString>> = iter.collect();
+
+    // Create a VecModel from Vec<ModelRc<SharedString>>
+    let vec_model = VecModel::from(vec_of_models);
+
+    // Wrap into ModelRc
+    ModelRc::new(vec_model)
 }

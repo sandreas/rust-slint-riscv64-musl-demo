@@ -1,19 +1,32 @@
-import { Button, HorizontalBox, Palette, ScrollView, Slider, Switch, VerticalBox  } from "std-widgets.slint";
+import {
+    Button,
+    HorizontalBox,
+    Palette,
+    ScrollView,
+    Slider,
+    Switch,
+    VerticalBox,
+} from "std-widgets.slint";
 
 global Icons {
-    in-out property<image> audiobooks: @image-url("images/icons/audiobooks.svg");
-    in-out property<image> music: @image-url("images/icons/music.svg");
-    in-out property<image> search: @image-url("images/icons/search.svg");
-    in-out property<image> settings: @image-url("images/icons/settings.svg");
+    in-out property <image> audiobooks: @image-url("images/icons/audiobooks.svg");
+    in-out property <image> music: @image-url("images/icons/music.svg");
+    in-out property <image> search: @image-url("images/icons/search.svg");
+    in-out property <image> settings: @image-url("images/icons/settings.svg");
 }
 
 global Preferences {
-    in-out property<bool> fullscreen: false;
+    in-out property <bool> fullscreen: false;
 }
 
 export global Navigation {
     in-out property <[string]> route: ["home"];
+    in-out property <int> history_index: 0;
+    in-out property <[[string]]> history: [["home"]];
+
     callback goto([string]);
+    callback back();
+    callback forward();
 }
 
 component Navigator inherits TouchArea {
@@ -21,7 +34,7 @@ component Navigator inherits TouchArea {
     clicked => {
         Navigation.goto(route);
     }
- }
+}
 
 
 // import { HomeButton } from "./home_button.slint";
@@ -30,64 +43,72 @@ component HomeButton inherits Navigator {
     in property <string> text;
     VerticalBox {
         Image {
-           source: image;
-           width: 150px;
-           height: 150px;
+            source: image;
+            width: 150px;
+            height: 150px;
         }
+
         Text {
             horizontal-alignment: center;
             text: text;
         }
-
     }
 }
 
 // import { Home } from "./home.slint";
 component Home {
     VerticalBox {
-            alignment: start;
-            HorizontalBox {
-                alignment: center;
-                HomeButton {
-                    image: Icons.audiobooks;
-                    route: ["books"];
-                    text: "Books";
-                }
-
-                HomeButton {
-                    image: Icons.music;
-                    route: ["music"];
-                    text: "Music";
-                }
+        alignment: start;
+        HorizontalBox {
+            alignment: center;
+            HomeButton {
+                image: Icons.audiobooks;
+                route: ["audiobooks"];
+                text: "Audio books";
             }
 
-            HorizontalBox {
-                alignment: center;
-                HomeButton {
-                    image: Icons.search;
-                    route: ["settings"];
-                    text: "Search";
-                }
-                HomeButton {
-                    image: Icons.settings;
-                    route: ["settings"];
-                    text: "Settings";
-                }
+            HomeButton {
+                image: Icons.music;
+                route: ["music"];
+                text: "Music";
             }
-
         }
+
+        HorizontalBox {
+            alignment: center;
+            HomeButton {
+                image: Icons.search;
+                route: ["search"];
+                text: "Search";
+            }
+
+            HomeButton {
+                image: Icons.settings;
+                route: ["settings"];
+                text: "Settings";
+            }
+        }
+    }
 }
 
 // import { Audiobooks } from "./main/audiobooks.slint";
 component Audiobooks {
-    Text {
-        text: "Audiobooks";
+    VerticalBox {
+        HorizontalBox {
+            Text {
+                text: "Audio Books";
+            }
+        }
     }
 }
 
 component Music {
-    Text {
-        text: "Music";
+    VerticalBox {
+        HorizontalBox {
+            Text {
+                text: "Music";
+            }
+        }
     }
 }
 
@@ -102,42 +123,80 @@ component Search {
 }
 
 component Settings {
+
     VerticalBox {
-        HorizontalBox {
-            VerticalBox {
-                Slider {
-                    value: 0;
-                    minimum: 0;
-                    maximum: 2000;
-
-                    // changed(value) => {}
-
-                }
+        alignment: start;
+        VerticalBox {
+            Text {
+                text: "Brightness";
             }
-            Switch {
-                horizontal-stretch: 0;
-                text: @tr("Dark Mode");
-                checked: Palette.color-scheme == ColorScheme.dark;
-                toggled => {
-                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
-                }
+            Slider {
+                value: 0;
+                minimum: 0;
+                maximum: 2000;
+
+                // changed(value) => {}
+            }
+        }
+
+        Switch {
+            horizontal-stretch: 0;
+            text: @tr("Dark Mode");
+            checked: Palette.color-scheme == ColorScheme.dark;
+            toggled => {
+                Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
             }
         }
     }
+
 }
 
 export component MainWindow inherits Window {
 
-   // 368 x 552
-   preferred-width: 368px;
-   preferred-height: 552px;
+    // 368 x 552
+    preferred-width: 368px;
+    preferred-height: 552px;
+
+    init => {
+        // load preferences
+        // restore route
+    }
+
+    SwipeGestureHandler {
+        handle-swipe-right: true;
+        handle-swipe-left: true;
+        swiped => {
+            if self.current-position.x > self.pressed-position.x + self.width / 4 {
+                Navigation.back()
+            } else if self.current-position.x < self.pressed-position.x - self.width / 4 {
+                Navigation.forward();
+            }
+        }
+        VerticalBox {
+            HorizontalBox {
+                Button {
+                    text: "<";
+                    clicked => {
+                        Navigation.back();
+                    }
+                }
+                Button {
+                    text: ">";
+                    clicked => {
+                        Navigation.forward();
+                    }
+                }
+            }
+            ScrollView {
+                if Navigation.route[0] == "home": Home { }
+                if Navigation.route[0] == "audiobooks": Audiobooks { }
+                if Navigation.route[0] == "music": Music { }
+                if Navigation.route[0] == "settings": Settings { }
+                if Navigation.route[0] == "search": Search { }
+            }
+        }
+
+    }
 
 
-   ScrollView {
-       if Navigation.route[0] == "home" : Home { }
-       if Navigation.route[0] == "audiobooks" : Audiobooks { }
-       if Navigation.route[0] == "music" : Music { }
-       if Navigation.route[0] == "settings" : Settings { }
-       if Navigation.route[0] == "search" : Search { }
-   }
 }
