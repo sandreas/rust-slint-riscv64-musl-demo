@@ -1,23 +1,23 @@
 import { Button, HorizontalBox, Palette, ScrollView, Slider, Switch, VerticalBox  } from "std-widgets.slint";
 
-export global Icons {
+global Icons {
     in-out property<image> audiobooks: @image-url("images/icons/audiobooks.svg");
     in-out property<image> music: @image-url("images/icons/music.svg");
     in-out property<image> search: @image-url("images/icons/search.svg");
     in-out property<image> settings: @image-url("images/icons/settings.svg");
 }
 
-export global Preferences {
+global Preferences {
     in-out property<bool> fullscreen: false;
 }
 
 export global Navigation {
-    in-out property <string> route: "home";
-    callback goto(string);
+    in-out property <[string]> route: ["home"];
+    callback goto([string]);
 }
 
-export component Navigator inherits TouchArea {
-    in property <string> route;
+component Navigator inherits TouchArea {
+    in property <[string]> route;
     clicked => {
         Navigation.goto(route);
     }
@@ -25,7 +25,7 @@ export component Navigator inherits TouchArea {
 
 
 // import { HomeButton } from "./home_button.slint";
-export component HomeButton inherits Navigator {
+component HomeButton inherits Navigator {
     in property <image> image;
     in property <string> text;
     VerticalBox {
@@ -43,20 +43,20 @@ export component HomeButton inherits Navigator {
 }
 
 // import { Home } from "./home.slint";
-export component Home {
+component Home {
     VerticalBox {
             alignment: start;
             HorizontalBox {
                 alignment: center;
                 HomeButton {
                     image: Icons.audiobooks;
-                    route: "books";
+                    route: ["books"];
                     text: "Books";
                 }
 
                 HomeButton {
                     image: Icons.music;
-                    route: "music";
+                    route: ["music"];
                     text: "Music";
                 }
             }
@@ -65,12 +65,12 @@ export component Home {
                 alignment: center;
                 HomeButton {
                     image: Icons.search;
-                    route: "settings";
+                    route: ["settings"];
                     text: "Search";
                 }
                 HomeButton {
                     image: Icons.settings;
-                    route: "settings";
+                    route: ["settings"];
                     text: "Settings";
                 }
             }
@@ -79,19 +79,19 @@ export component Home {
 }
 
 // import { Audiobooks } from "./main/audiobooks.slint";
-export component Audiobooks {
+component Audiobooks {
     Text {
         text: "Audiobooks";
     }
 }
 
-export component Music {
+component Music {
     Text {
         text: "Music";
     }
 }
 
-export component Search {
+component Search {
     VerticalBox {
         HorizontalBox {
             Text {
@@ -101,7 +101,7 @@ export component Search {
     }
 }
 
-export component Settings {
+component Settings {
     VerticalBox {
         HorizontalBox {
             VerticalBox {
@@ -134,10 +134,10 @@ export component MainWindow inherits Window {
 
 
    ScrollView {
-       if Navigation.route == "home" : Home { }
-       if Navigation.route == "audiobooks" : Audiobooks { }
-       if Navigation.route == "music" : Music { }
-       if Navigation.route == "settings" : Settings { }
-       if Navigation.route == "search" : Search { }
+       if Navigation.route[0] == "home" : Home { }
+       if Navigation.route[0] == "audiobooks" : Audiobooks { }
+       if Navigation.route[0] == "music" : Music { }
+       if Navigation.route[0] == "settings" : Settings { }
+       if Navigation.route[0] == "search" : Search { }
    }
 }
