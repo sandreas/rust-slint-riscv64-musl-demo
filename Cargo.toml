@@ -32,4 +32,3 @@ panic = 'abort'       # Abort on panic (smaller binary size)
 [dependencies]
 awedio = "0.5.0"
 cpal = "0.15.3"
-

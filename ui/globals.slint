@@ -1,0 +1,20 @@
+export global Icons {
+    in-out property <image> audiobooks: @image-url("images/icons/audiobooks.png");
+    in-out property <image> music: @image-url("images/icons/music.png");
+    in-out property <image> search: @image-url("images/icons/search.png");
+    in-out property <image> settings: @image-url("images/icons/settings.png");
+}
+
+export global Navigation {
+    in-out property <[string]> route: ["home"];
+    in-out property <int> history_index: 0;
+    in-out property <[[string]]> history: [["home"]];
+
+    callback goto([string]);
+    callback back();
+    callback forward();
+}
+
+export global Preferences {
+    in-out property <bool> fullscreen: false;
+}

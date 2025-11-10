@@ -1,0 +1,21 @@
+import { Navigator } from "../navigator.slint";
+import {
+    VerticalBox,
+} from "std-widgets.slint";
+
+export component HomeButton inherits Navigator {
+    in property <image> image;
+    in property <string> text;
+    VerticalBox {
+        Image {
+            source: image;
+            width: 150px;
+            height: 150px;
+        }
+
+        Text {
+            horizontal-alignment: center;
+            text: text;
+        }
+    }
+}

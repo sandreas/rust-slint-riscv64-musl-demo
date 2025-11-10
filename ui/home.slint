@@ -1,0 +1,43 @@
+import { Icons } from "globals.slint";
+
+import {
+    HorizontalBox,
+    VerticalBox,
+} from "std-widgets.slint";
+
+import { HomeButton } from "home/home_button.slint";
+
+export component Home {
+    VerticalBox {
+        alignment: start;
+        HorizontalBox {
+            alignment: center;
+            HomeButton {
+                image: Icons.audiobooks;
+                route: ["audiobooks"];
+                text: "Audio books";
+            }
+
+            HomeButton {
+                image: Icons.music;
+                route: ["music"];
+                text: "Music";
+            }
+        }
+
+        HorizontalBox {
+            alignment: center;
+            HomeButton {
+                image: Icons.search;
+                route: ["search"];
+                text: "Search";
+            }
+
+            HomeButton {
+                image: Icons.settings;
+                route: ["settings"];
+                text: "Settings";
+            }
+        }
+    }
+}

@@ -1,3 +1,7 @@
+import { Icons, Navigation, Preferences } from "globals.slint";
+
+export { Navigation }
+
 import {
     Button,
     HorizontalBox,
@@ -7,149 +11,15 @@ import {
     Switch,
     VerticalBox,
 } from "std-widgets.slint";
+import { Navigator } from "navigator.slint";
 
-global Icons {
-    in-out property <image> audiobooks: @image-url("images/icons/audiobooks.png");
-    in-out property <image> music: @image-url("images/icons/music.png");
-    in-out property <image> search: @image-url("images/icons/search.png");
-    in-out property <image> settings: @image-url("images/icons/settings.png");
-}
-
-global Preferences {
-    in-out property <bool> fullscreen: false;
-}
-
-export global Navigation {
-    in-out property <[string]> route: ["home"];
-    in-out property <int> history_index: 0;
-    in-out property <[[string]]> history: [["home"]];
-
-    callback goto([string]);
-    callback back();
-    callback forward();
-}
-
-component Navigator inherits TouchArea {
-    in property <[string]> route;
-    clicked => {
-        Navigation.goto(route);
-    }
-}
+import { Home } from "home.slint";
+import { Audiobooks } from "main/audiobooks.slint";
+import { Music } from "main/music.slint";
+import { Search } from "main/search.slint";
+import { Settings } from "main/settings.slint";
 
 
-// import { HomeButton } from "./home_button.slint";
-component HomeButton inherits Navigator {
-    in property <image> image;
-    in property <string> text;
-    VerticalBox {
-        Image {
-            source: image;
-            width: 150px;
-            height: 150px;
-        }
-
-        Text {
-            horizontal-alignment: center;
-            text: text;
-        }
-    }
-}
-
-// import { Home } from "./home.slint";
-component Home {
-    VerticalBox {
-        alignment: start;
-        HorizontalBox {
-            alignment: center;
-            HomeButton {
-                image: Icons.audiobooks;
-                route: ["audiobooks"];
-                text: "Audio books";
-            }
-
-            HomeButton {
-                image: Icons.music;
-                route: ["music"];
-                text: "Music";
-            }
-        }
-
-        HorizontalBox {
-            alignment: center;
-            HomeButton {
-                image: Icons.search;
-                route: ["search"];
-                text: "Search";
-            }
-
-            HomeButton {
-                image: Icons.settings;
-                route: ["settings"];
-                text: "Settings";
-            }
-        }
-    }
-}
-
-// import { Audiobooks } from "./main/audiobooks.slint";
-component Audiobooks {
-    VerticalBox {
-        HorizontalBox {
-            Text {
-                text: "Audio Books";
-            }
-        }
-    }
-}
-
-component Music {
-    VerticalBox {
-        HorizontalBox {
-            Text {
-                text: "Music";
-            }
-        }
-    }
-}
-
-component Search {
-    VerticalBox {
-        HorizontalBox {
-            Text {
-                text: "Search";
-            }
-        }
-    }
-}
-
-component Settings {
-
-    VerticalBox {
-        alignment: start;
-        VerticalBox {
-            Text {
-                text: "Brightness";
-            }
-            Slider {
-                value: 0;
-                minimum: 0;
-                maximum: 2000;
-
-                // changed(value) => {}
-            }
-        }
-
-        Switch {
-            horizontal-stretch: 0;
-            text: @tr("Dark Mode");
-            checked: Palette.color-scheme == ColorScheme.dark;
-            toggled => {
-                Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
-            }
-        }
-    }
-
-}
 
 export component MainWindow inherits Window {
     in-out property <physical-length> swipe-area-width: 50px;
@@ -163,50 +33,53 @@ export component MainWindow inherits Window {
         // restore route
     }
 
-        SwipeGestureHandler {
-            x: 0;
-            y: 0;
-            width:swipe-area-width;
-            height:100%;
-            handle-swipe-right: true;
-            handle-swipe-left: false;
-            swiped => {
-                Navigation.back()
-            }
+    SwipeGestureHandler {
+        x: 0;
+        y: 0;
+        width: swipe-area-width;
+        height: 100%;
+        handle-swipe-right: true;
+        handle-swipe-left: false;
+        swiped => {
+            Navigation.back()
         }
-        VerticalBox {
-            HorizontalBox {
-                Button {
-                    text: "<";
-                    clicked => {
-                        Navigation.back();
-                    }
-                }
-                Button {
-                    text: ">";
-                    clicked => {
-                        Navigation.forward();
-                    }
+    }
+
+    VerticalBox {
+        HorizontalBox {
+            Button {
+                text: "<";
+                clicked => {
+                    Navigation.back();
                 }
             }
-            ScrollView {
-                if Navigation.route[0] == "home": Home { }
-                if Navigation.route[0] == "audiobooks": Audiobooks { }
-                if Navigation.route[0] == "music": Music { }
-                if Navigation.route[0] == "settings": Settings { }
-                if Navigation.route[0] == "search": Search { }
-            }
-        }
-        SwipeGestureHandler {
-            x: root.width - swipe-area-width;
-            y: 0;
-            width:swipe-area-width;
-            height:100%;
-            handle-swipe-right: false;
-            handle-swipe-left: true;
-            swiped => {
-                Navigation.forward()
+
+            Button {
+                text: ">";
+                clicked => {
+                    Navigation.forward();
+                }
             }
         }
 
+        ScrollView {
+            if Navigation.route[0] == "home": Home { }
+            if Navigation.route[0] == "audiobooks": Audiobooks { }
+            if Navigation.route[0] == "music": Music { }
+            if Navigation.route[0] == "settings": Settings { }
+            if Navigation.route[0] == "search": Search { }
+        }
+    }
+
+    SwipeGestureHandler {
+        x: root.width - swipe-area-width;
+        y: 0;
+        width: swipe-area-width;
+        height: 100%;
+        handle-swipe-right: false;
+        handle-swipe-left: true;
+        swiped => {
+            Navigation.forward()
+        }
+    }
 }
