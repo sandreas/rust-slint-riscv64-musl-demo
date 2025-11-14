@@ -94,8 +94,8 @@ That's it for now, more to come.
   - Support for WASM Plugins (see [zellij](https://zellij.dev/))
 
 # Challenges
-- Onscreen Keyboard on a tiny device (maybe voice input?)
-- 
+- Onscreen Keyboard on a tiny device (maybe voice input or T9 based text input options?)
+- Optimize Battery time (CPU clock, sleep modes, backlight intensity, etc)
 
 # Roadmap / Todo
 - [x] Find suitable Hardware (Board, Display, Audio)
