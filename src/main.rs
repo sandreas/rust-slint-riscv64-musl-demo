@@ -1,3 +1,6 @@
+mod audio_player;
+mod awedio_extensions;
+
 use std::iter;
 use awedio::{backends};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -9,7 +12,7 @@ use cpal::traits::{DeviceTrait, HostTrait};
 fn main() -> Result<(), slint::PlatformError> {
 
     let ui = MainWindow::new()?;
-    
+
     let navigation = ui.global::<Navigation>();
     let goto_ui = ui.clone_strong();
     navigation.on_goto(move |value| {
@@ -64,6 +67,7 @@ fn main() -> Result<(), slint::PlatformError> {
 }
 
 
+
 fn init_audio() {
     let host = cpal::default_host();
     let mut device = None;
@@ -95,6 +99,7 @@ fn init_audio() {
     let sample_rate = default_config.sample_rate().0;
     let channel_count = default_config.channels();
     let sample_format = default_config.sample_format();
+
 
     let mut backend = backends::CpalBackend::new(channel_count,
                                                  sample_rate,
