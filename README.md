@@ -1,6 +1,17 @@
 # rust-slint-riscv64-musl-demo
 A demo for rust slint on riscv64 musl
 
+# Current status
+
+This project is currently under development and in a very early state. 
+It can be compiled for LicheeRV Nano (riscv64-musl), has some fancy Icons, 
+navigation works (somehow), dark-mode can be enabled but that's basically it.
+
+Here is how it looks at the moment:
+
+![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
+
+
 
 # Prerequisites
 
@@ -9,11 +20,11 @@ A demo for rust slint on riscv64 musl
 - [Sipeed LicheeRV Nano](https://wiki.sipeed.com/hardware/en/lichee/RV_Nano/1_intro.html)
 - [Sitronix(?) LHCM228TS003A 2.28" Touch Display](https://b2b.baidu.com/land?id=39559f991fdef58e6c72b9f770bae1d810)
 - [Apple USB-C to 3.5 mm Headphone Jack Adapter](https://www.apple.com/shop/product/mw2q3am/a/usb-c-to-35-mm-headphone-jack-adapter)
-- Optional (Caution, 4.2V or 4.35V Versions won't work): [5V Version of TP4057 Battery charger board](https://makerselectronics.com/product/lithium-battery-charger-discharge-module-tp4057-lx-lbc3-type-c-usb-1a/)
+- Optional - for battery based usage: [5V Version of TP4057 Battery charger board](https://makerselectronics.com/product/lithium-battery-charger-discharge-module-tp4057-lx-lbc3-type-c-usb-1a/) ( 4.2V or 4.35V Versions won't work, too low Voltage)
 
 To connect the USB-Audio Adapter AND power the device, you need to supply power to the VSYS and GND Pin, because you can
 not use USB to power the device. 
-CAUTION: You need to supply 5V, the LicheeRV Nano is pretty picky about to high voltages, so be careful.
+CAUTION: You need to supply around 5V, the LicheeRV Nano is pretty picky about too low or too high voltages, so be careful, in my tests 5.15V from the TP4057 were ok.
 
 ## Firmware-Image
 
