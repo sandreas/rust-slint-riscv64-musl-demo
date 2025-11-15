@@ -5,6 +5,35 @@ use awedio::Sound;
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 
 
+
+pub struct Player {
+    manager: Manager,
+    sound: Option<Box<dyn Sound>>,
+
+    // Add fields like current track, playback state, etc.
+}
+
+impl Player {
+
+    pub fn new(manager: Manager) -> Self {
+        Player { manager, sound: None }
+    }
+
+    pub async fn play(&mut self, file_name: String) {
+        // Async play logic (load, decode, output audio)
+        println!("Playing file: {}", file_name);
+    }
+
+    pub async fn pause(&mut self) {
+        // Async pause logic
+        println!("Paused");
+    }
+
+    // Implement other async controls: next, previous, fast_forward, rewind
+}
+
+
+
 /*
 Ideas:
 - PlayerState => Playing, Paused, Buffering, etc.

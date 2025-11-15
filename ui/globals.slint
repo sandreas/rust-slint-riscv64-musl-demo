@@ -5,6 +5,11 @@ export global Icons {
     in-out property <image> settings: @image-url("images/icons/settings.png");
 }
 
+export global AudioPlayer {
+    callback play(string);
+    callback pause();
+}
+
 export global Navigation {
     in-out property <[string]> route: ["home"];
     in-out property <int> history_index: 0;

@@ -8,10 +8,17 @@ import {
     VerticalBox,
 } from "std-widgets.slint";
 
+import {AudioPlayer} from "../globals.slint";
 
 export component Audiobooks {
     VerticalBox {
         HorizontalBox {
+            Button {
+                text: "play something";
+                clicked => {
+                    AudioPlayer.play("something");
+                }
+            }
             Text {
                 text: "Audio Books";
             }

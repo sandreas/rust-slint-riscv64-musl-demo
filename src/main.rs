@@ -1,4 +1,4 @@
-mod audio_player;
+mod player;
 mod awedio_extensions;
 
 use std::iter;
@@ -7,11 +7,67 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 slint::include_modules!();
 use awedio::backends::CpalBufferSize;
 use cpal::traits::{DeviceTrait, HostTrait};
+use player::Player;
+use tokio::sync::mpsc;
+use std::sync::Arc;
+
+#[derive(Debug)]
+enum PlayerCommand { Play(String), Pause, Next, Previous, FastForward, Rewind }
 
 
-fn main() -> Result<(), slint::PlatformError> {
+async fn player_task(mut player: Player, mut rx: mpsc::UnboundedReceiver<PlayerCommand>) {
+    while let Some(cmd) = rx.recv().await {
+        match cmd {
+            PlayerCommand::Play(file) => player.play(file).await,
+            PlayerCommand::Pause => player.pause().await,
+            PlayerCommand::Next => { /* handle */ }
+            PlayerCommand::Previous => { /* handle */ }
+            PlayerCommand::FastForward => { /* handle */ }
+            PlayerCommand::Rewind => { /* handle */ }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), slint::PlatformError> {
 
     let ui = MainWindow::new()?;
+    let ui_handle = ui.as_weak();
+    let (tx, mut rx) = mpsc::unbounded_channel::<PlayerCommand>();
+
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+    // Create your player instance
+
+
+    let audio_player = ui.global::<AudioPlayer>();
+    audio_player.on_play({
+        let tx = tx.clone();
+        move |file_name: SharedString| {
+            tx.send(PlayerCommand::Play(file_name.to_string())).unwrap();
+        }
+    });
+    /*
+    audio_player.on_play({
+        let tx = tx.clone(); // your channel sender for commands
+        move |file_name: SharedString| {
+            // Convert to standard Rust String if needed
+            let file: String = file_name.to_string();
+            tx.send(PlayerCommand::Play(file)).unwrap();
+        }
+    });
+    */
+    /*
+    // Hook up UI callbacks to send commands
+    ui.on_play({
+        let tx = tx.clone();
+        move || { tx.send(AudioCommand::Play).unwrap(); }
+    });
+    ui.on_pause({
+        let tx = tx.clone();
+        move || { tx.send(AudioCommand::Pause).unwrap(); }
+    });
+*/
 
     let navigation = ui.global::<Navigation>();
     let goto_ui = ui.clone_strong();
@@ -63,12 +119,7 @@ fn main() -> Result<(), slint::PlatformError> {
         nav.set_history_index(current_index+1);
     });
 
-    ui.run()
-}
 
-
-
-fn init_audio() {
     let host = cpal::default_host();
     let mut device = None;
     for _ in 1..3 {
@@ -107,8 +158,46 @@ fn init_audio() {
                                                  selected_device,
                                                  sample_format);
 
-    let mut manager = backend.start(|error| eprintln!("error with cpal output stream: {}", error)).unwrap();
+    let manager = backend.start(|error| eprintln!("error with cpal output stream: {}", error)).unwrap();
 
+    let player = Player::new(manager);
+
+    // Spawn background player task
+    tokio::spawn(player_task(player, rx));
+    
+    /*
+
+    // Spawn the audio background service
+    tokio::spawn(async move {
+        while let Some(cmd) = rx.recv().await {
+            // Here, handle command (e.g. play, pause, ...) using your player backend
+            // Pretend playback happens here
+            slint::invoke_from_event_loop({
+                let ui_handle = ui_handle.clone();
+                move || {
+                    let ui = ui_handle.unwrap();
+                    // ui.set_status(SharedString::from(format!("Handled: {:?}", cmd)));
+                }
+            }).unwrap();
+
+            match cmd {
+                PlayerCommand::Play(file_name) => {
+
+                }
+                // ...
+                _ => {}
+            }
+        }
+    });
+    */
+    ui.run()
+}
+
+
+
+fn init_audio() {
+    
+    
     /*
             // List output devices and find one that roughly matches "hw:2,0" or its ALSA name
             let device = host.output_devices().unwrap()
