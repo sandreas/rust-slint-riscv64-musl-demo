@@ -1,6 +1,6 @@
-import { AudioPlayer, Icons, Navigation, Preferences } from "globals.slint";
+import { SlintAudioPlayer, SlintIcons, SlintNavigation, SlintPreferences } from "globals.slint";
 
-export { AudioPlayer, Navigation }
+export { SlintAudioPlayer, SlintNavigation, SlintPreferences }
 
 import {
     Button,
@@ -20,6 +20,9 @@ import { Search } from "main/search.slint";
 import { Settings } from "main/settings.slint";
 
 export component MainWindow inherits Window {
+    default-font-family: "Lato";
+    default-font-size: 14pt;
+
     in-out property <physical-length> swipe-area-width: 50px;
 
     // 368 x 552
@@ -29,7 +32,8 @@ export component MainWindow inherits Window {
     init => {
         // load preferences
         // restore route
-        Palette.color-scheme = ColorScheme.dark;
+        Palette.color-scheme = SlintPreferences.color-scheme;
+
     }
 
     SwipeGestureHandler {
@@ -40,7 +44,7 @@ export component MainWindow inherits Window {
         handle-swipe-right: true;
         handle-swipe-left: false;
         swiped => {
-            Navigation.back()
+            SlintNavigation.back()
         }
     }
 
@@ -49,24 +53,24 @@ export component MainWindow inherits Window {
             Button {
                 text: "<";
                 clicked => {
-                    Navigation.back();
+                    SlintNavigation.back();
                 }
             }
 
             Button {
                 text: ">";
                 clicked => {
-                    Navigation.forward();
+                    SlintNavigation.forward();
                 }
             }
         }
 
         ScrollView {
-            if Navigation.route[0] == "home": Home { }
-            if Navigation.route[0] == "audiobooks": Audiobooks { }
-            if Navigation.route[0] == "music": Music { }
-            if Navigation.route[0] == "settings": Settings { }
-            if Navigation.route[0] == "search": Search { }
+            if SlintNavigation.route[0] == "home": Home { }
+            if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
+            if SlintNavigation.route[0] == "music": Music { }
+            if SlintNavigation.route[0] == "settings": Settings { }
+            if SlintNavigation.route[0] == "search": Search { }
         }
     }
 
@@ -78,7 +82,7 @@ export component MainWindow inherits Window {
         handle-swipe-right: false;
         handle-swipe-left: true;
         swiped => {
-            Navigation.forward()
+            SlintNavigation.forward()
         }
     }
 }

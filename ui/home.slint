@@ -1,4 +1,4 @@
-import { Icons } from "globals.slint";
+import { SlintIcons } from "globals.slint";
 
 import {
     HorizontalBox,
@@ -13,13 +13,13 @@ export component Home {
         HorizontalBox {
             alignment: center;
             HomeButton {
-                image: Icons.audiobooks;
+                image: SlintIcons.audiobooks;
                 route: ["audiobooks"];
                 text: "Audio books";
             }
 
             HomeButton {
-                image: Icons.music;
+                image: SlintIcons.music;
                 route: ["music"];
                 text: "Music";
             }
@@ -28,13 +28,13 @@ export component Home {
         HorizontalBox {
             alignment: center;
             HomeButton {
-                image: Icons.search;
+                image: SlintIcons.search;
                 route: ["search"];
                 text: "Search";
             }
 
             HomeButton {
-                image: Icons.settings;
+                image: SlintIcons.settings;
                 route: ["settings"];
                 text: "Settings";
             }

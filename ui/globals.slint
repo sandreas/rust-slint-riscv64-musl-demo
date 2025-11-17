@@ -1,16 +1,16 @@
-export global Icons {
+export global SlintIcons {
     in-out property <image> audiobooks: @image-url("images/icons/audiobooks.png");
     in-out property <image> music: @image-url("images/icons/music.png");
     in-out property <image> search: @image-url("images/icons/search.png");
     in-out property <image> settings: @image-url("images/icons/settings.png");
 }
 
-export global AudioPlayer {
+export global SlintAudioPlayer {
     callback play(string);
     callback pause();
 }
 
-export global Navigation {
+export global SlintNavigation {
     in-out property <[string]> route: ["home"];
     in-out property <int> history_index: 0;
     in-out property <[[string]]> history: [["home"]];
@@ -20,6 +20,11 @@ export global Navigation {
     callback forward();
 }
 
-export global Preferences {
-    in-out property <bool> fullscreen: false;
+export global SlintPreferences {
+    callback sync();
+
+    in-out property <ColorScheme> color-scheme: ColorScheme.dark;
+    // in-out property <bool> fullscreen: false;
+    in-out property <float> brightness: 0.3;
+
 }

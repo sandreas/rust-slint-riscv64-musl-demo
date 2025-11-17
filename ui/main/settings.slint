@@ -6,6 +6,8 @@ import {
     VerticalBox,
 } from "std-widgets.slint";
 
+import {SlintPreferences} from "../globals.slint";
+
 export component Settings {
     VerticalBox {
         alignment: start;
@@ -15,24 +17,27 @@ export component Settings {
             }
 
             Slider {
-            width: 200px;
-            height:300px;
-                value: 0;
-                minimum: 0;
-                maximum: 2000;
-
-                // changed(value) => {}
+                value <=> SlintPreferences.brightness;
+                step: 0.01;
+                minimum: 0.01;
+                maximum: 1;
+                changed value => {
+                    SlintPreferences.sync();
+                }
+            }
+        }
+        VerticalBox {
+            Switch {
+                horizontal-stretch: 0;
+                text: @tr("Dark Mode");
+                checked: Palette.color-scheme == ColorScheme.dark;
+                toggled => {
+                    Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
+                    SlintPreferences.color-scheme = Palette.color-scheme;
+                    SlintPreferences.sync();
+                }
             }
         }
 
-        Switch {
-            horizontal-stretch: 0;
-            text: @tr("Dark Mode");
-            checked: Palette.color-scheme == ColorScheme.dark;
-            toggled => {
-
-                Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
-            }
-        }
     }
 }
