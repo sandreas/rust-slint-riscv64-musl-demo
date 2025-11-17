@@ -15,6 +15,8 @@ export component Settings {
             }
 
             Slider {
+            width: 200px;
+            height:300px;
                 value: 0;
                 minimum: 0;
                 maximum: 2000;
@@ -28,6 +30,7 @@ export component Settings {
             text: @tr("Dark Mode");
             checked: Palette.color-scheme == ColorScheme.dark;
             toggled => {
+
                 Palette.color-scheme = self.checked ? ColorScheme.dark : ColorScheme.light;
             }
         }

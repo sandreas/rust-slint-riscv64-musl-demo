@@ -19,8 +19,6 @@ import { Music } from "main/music.slint";
 import { Search } from "main/search.slint";
 import { Settings } from "main/settings.slint";
 
-
-
 export component MainWindow inherits Window {
     in-out property <physical-length> swipe-area-width: 50px;
 
@@ -31,6 +29,7 @@ export component MainWindow inherits Window {
     init => {
         // load preferences
         // restore route
+        Palette.color-scheme = ColorScheme.dark;
     }
 
     SwipeGestureHandler {

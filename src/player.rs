@@ -1,32 +1,44 @@
-use std::time::Duration;
-use awedio::manager::Manager;
-use awedio::Sound;
 // https://github.com/PaulWoitaschek/Voice/blob/main/core/playback/src/main/kotlin/voice/core/playback/player/VoicePlayer.kt
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 
 
 
 pub struct Player {
-    manager: Manager,
-    sound: Option<Box<dyn Sound>>,
-
-    // Add fields like current track, playback state, etc.
 }
 
 impl Player {
-
-    pub fn new(manager: Manager) -> Self {
-        Player { manager, sound: None }
+    pub fn new() -> Self {
+        Player {  }
     }
 
-    pub async fn play(&mut self, file_name: String) {
+    pub async fn play(&mut self, id: String) {
         // Async play logic (load, decode, output audio)
-        println!("Playing file: {}", file_name);
+        println!("Playing file: {}", id);
+        if(id != "") {
+            /*
+            let open_result = awedio::sounds::open_file(id);
+            if(open_result.is_ok()) {
+                let (sound, notifier) = open_result.ok().unwrap()
+                    .pausable()
+                    .with_adjustable_volume()
+                    .with_adjustable_speed()
+                    .with_completion_notifier();
+                let sound = Box::new(sound);
+                // sound.set_paused(true);
+                // let sound_weak = sound.as_weak();
+
+                self.manager.play(sound);
+                let _ = notifier.recv();
+            }
+
+             */
+        }
+
     }
 
     pub async fn pause(&mut self) {
-        // Async pause logic
-        println!("Paused");
+        // self.manager.
+
     }
 
     // Implement other async controls: next, previous, fast_forward, rewind
@@ -61,46 +73,3 @@ Ideas:
 
     Ok(())
  */
-
-struct AudioPlayer {
-    manager: Manager,
-    sound: dyn Sound,
-
-}
-
-impl AudioPlayer {
-
-    fn is_playing() -> bool {
-        true
-    }
-    fn play(&mut self) {
-
-        // self.manager.play()
-        // self.sound.with_adjustable_speed()
-        // self.sound.with_adjustable_volume()
-    }
-
-    fn pause() {
-
-    }
-
-    fn next() {
-
-    }
-
-    fn previous() {
-
-    }
-
-    fn fast_forward() {
-
-    }
-
-    fn rewind() {
-
-    }
-
-    fn seek( position: Duration) {
-
-    }
-}

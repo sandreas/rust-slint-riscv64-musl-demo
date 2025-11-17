@@ -30,6 +30,5 @@ codegen-units = 1     # Optimize for single codegen unit (better performance)
 panic = 'abort'       # Abort on panic (smaller binary size)
 
 [dependencies]
-awedio = "0.5.0"
-cpal = "0.15.3"
+rodio = "0.21.1"
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "macros"] }

@@ -1,73 +1,180 @@
 mod player;
-mod awedio_extensions;
 
+use std::fs::File;
+use std::io::BufReader;
 use std::iter;
-use awedio::{backends};
+use rodio::{cpal, Decoder, DeviceTrait, OutputStream, OutputStreamBuilder, Sink, Source};
+use rodio::cpal::traits::HostTrait;
+use rodio::source::Buffered;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 slint::include_modules!();
-use awedio::backends::CpalBufferSize;
-use cpal::traits::{DeviceTrait, HostTrait};
-use player::Player;
-use tokio::sync::mpsc;
-use std::sync::Arc;
+
 
 #[derive(Debug)]
 enum PlayerCommand { Play(String), Pause, Next, Previous, FastForward, Rewind }
 
+/*
+type SoundSource = Buffered<Decoder<BufReader<File>>>;
 
-async fn player_task(mut player: Player, mut rx: mpsc::UnboundedReceiver<PlayerCommand>) {
-    while let Some(cmd) = rx.recv().await {
-        match cmd {
-            PlayerCommand::Play(file) => player.play(file).await,
-            PlayerCommand::Pause => player.pause().await,
-            PlayerCommand::Next => { /* handle */ }
-            PlayerCommand::Previous => { /* handle */ }
-            PlayerCommand::FastForward => { /* handle */ }
-            PlayerCommand::Rewind => { /* handle */ }
+pub struct Audio {
+    stream_handle: OutputStreamBuilder,
+    garand_m1_single_shot: SoundSource,
+}
+
+fn source(sound_file_string_path: &str) -> SoundSource {
+    let file = BufReader::new(File::open(sound_file_string_path).unwrap());
+    Decoder::new(file).unwrap().buffered()
+}
+
+
+impl Audio {
+    pub fn new() -> Self {
+        let (_stream, stream_handle) = OutputStream::try_into().unwrap();
+        // let (_, stream_handle) = OutputStream::try_from().unwrap();
+        let garand_m1_single_shot = source("resources/audio/lmg_fire01.mp3");
+        Self {
+            stream_handle,
+            garand_m1_single_shot,
         }
+    }
+
+    pub fn shot(&self) {
+        self.stream_handle.play_raw(self.garand_m1_single_shot.clone().convert_samples());
+    }
+}
+*/
+/*
+fn display_sample_format(sformat: &cpal::SampleFormat) -> &'static str {
+    match sformat {
+        cpal::SampleFormat::F32 => "FLOAT32LE",
+        cpal::SampleFormat::I16 => "S16LE",
+        cpal::SampleFormat::U16 => "U16LE",
+        _ => "unknown"
     }
 }
 
+
+fn print_conf_range(conf: &cpal::SupportedStreamConfigRange) {
+    let channels = conf.channels();
+    let sample_rate_min = conf.min_sample_rate();
+    let sample_rate_max = conf.max_sample_rate();
+    let sformat = display_sample_format(&conf.sample_format());
+    println!("      channels: {}, samplerate min: {} max: {}, format: {}", channels, sample_rate_min.0, sample_rate_max.0, sformat);
+}
+
+
+fn print_supported_conf(conf: &cpal::SupportedStreamConfig) {
+    let channels = conf.channels();
+    let sample_rate = conf.sample_rate();
+    let sformat = display_sample_format(&conf.sample_format());
+    println!("      channels: {}, samplerate: {}, format: {}", channels, sample_rate.0, sformat);
+}
+*/
+
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+/*
+    let available_hosts = cpal::available_hosts();
+    println!("Available hosts:\n  {:?}", available_hosts);
+
+    for host_id in available_hosts {
+        println!("{}", host_id.name());
+        let host = cpal::host_from_id(host_id).unwrap();
+        if let Some(default_in) = host.default_input_device() {
+            println!("  Default Input Device:\n    {:?}", default_in.name());
+        } else {
+            println!("  Failed getting Default Input Device");
+        }
+        if let Some(default_out) = host.default_output_device() {
+            println!("  Default Output Device:\n    {:?}", default_out.name());
+        } else {
+            println!("  Failed getting Default Output Device");
+        }
+
+        let devices = host.devices().unwrap();
+        println!("  Devices: ");
+        for (_device_index, device) in devices.enumerate() {
+            println!("\n\n  Device: \"{}\"", device.name().unwrap());
+            println!("  ============================================================");
+            println!("\n    Capture\n    ------------------------------------------------------------");
+            if let Ok(conf) = device.default_input_config() {
+                println!("    Default input stream config:");
+                print_supported_conf(&conf);
+            }
+            let mut input_configs = match device.supported_input_configs() {
+                Ok(f) => f.peekable(),
+                Err(e) => {
+                    println!("    Error: {:?}", e);
+                    continue;
+                }
+            };
+            if input_configs.peek().is_some() {
+                println!("    All supported input stream configs:");
+                for (_config_index, config) in input_configs.enumerate() {
+                    print_conf_range(&config);
+                }
+            }
+            println!("\n    Playback\n    ------------------------------------------------------------");
+            if let Ok(conf) = device.default_output_config() {
+                println!("    Default output stream config:");
+                print_supported_conf(&conf);
+            }
+            let mut output_configs = match device.supported_output_configs() {
+                Ok(f) => f.peekable(),
+                Err(e) => {
+                    println!("    Error: {:?}", e);
+                    continue;
+                }
+            };
+            if output_configs.peek().is_some() {
+                println!("    All supported output stream configs:");
+                for (_config_index, config) in output_configs.enumerate() {
+                    print_conf_range(&config);
+                }
+            }
+        }
+    }
+    return Ok(());
+    for dev in cpal::available_hosts() {
+        println!("{:?}", dev);
+
+
+    }
+*/
+
+    /*
+    let builder = OutputStreamBuilder::from_default_device().unwrap();
+    let stream = builder.open_stream_or_fallback().unwrap();
+    let sink = Sink::connect_new(stream.mixer());
+
+
+    let stream_handle = rodio::OutputStreamBuilder::open_default_stream().unwrap();
+    let sink = rodio::Sink::connect_new(stream_handle.mixer());
+
+    let file = std::fs::File::open("/home/andreas/projects/sandreas/rust-slint-riscv64-musl-demo/assets/audio/sample-3s.mp3").unwrap();
+    sink.append(rodio::Decoder::try_from(file).unwrap());
+
+    sink.sleep_until_end();
+*/
+
 
     let ui = MainWindow::new()?;
     let ui_handle = ui.as_weak();
-    let (tx, mut rx) = mpsc::unbounded_channel::<PlayerCommand>();
 
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
     // Create your player instance
+    let audioPlayer = ui.global::<AudioPlayer>();
+    audioPlayer.on_play({
+
+        // let tx = tx.clone();
+        move |file_name: SharedString| {
 
 
-    let audio_player = ui.global::<AudioPlayer>();
-    audio_player.on_play({
-        let tx = tx.clone();
-        move |file_name: SharedString| {
-            tx.send(PlayerCommand::Play(file_name.to_string())).unwrap();
+
+            // tx.send(PlayerCommand::Play(file_name.to_string())).unwrap();
         }
     });
-    /*
-    audio_player.on_play({
-        let tx = tx.clone(); // your channel sender for commands
-        move |file_name: SharedString| {
-            // Convert to standard Rust String if needed
-            let file: String = file_name.to_string();
-            tx.send(PlayerCommand::Play(file)).unwrap();
-        }
-    });
-    */
-    /*
-    // Hook up UI callbacks to send commands
-    ui.on_play({
-        let tx = tx.clone();
-        move || { tx.send(AudioCommand::Play).unwrap(); }
-    });
-    ui.on_pause({
-        let tx = tx.clone();
-        move || { tx.send(AudioCommand::Pause).unwrap(); }
-    });
-*/
+
 
     let navigation = ui.global::<Navigation>();
     let goto_ui = ui.clone_strong();
@@ -79,8 +186,8 @@ async fn main() -> Result<(), slint::PlatformError> {
         // inner_ui.global::<Navigation>().set_history()
 
         let tmp_next_index = nav.get_history_index() + 1;
-        let next_index = if tmp_next_index > 1000 { 1000 } else {tmp_next_index};
-        let skip = if tmp_next_index > 1000 { 1 } else {0};
+        let next_index = if tmp_next_index > 1000 { 1000 } else { tmp_next_index };
+        let skip = if tmp_next_index > 1000 { 1 } else { 0 };
         let take = next_index - skip;
         let vec_of_history: Vec<ModelRc<SharedString>> = nav
             .get_history()
@@ -102,8 +209,8 @@ async fn main() -> Result<(), slint::PlatformError> {
         if current_index == 0 || vec_of_history.is_empty() {
             return;
         }
-        nav.set_route(vec_of_history[vec_index-1].clone());
-        nav.set_history_index(current_index-1);
+        nav.set_route(vec_of_history[vec_index - 1].clone());
+        nav.set_history_index(current_index - 1);
     });
 
     let forward_ui = ui.clone_strong();
@@ -115,136 +222,11 @@ async fn main() -> Result<(), slint::PlatformError> {
         if vec_of_history.len() < vec_index + 2 {
             return;
         }
-        nav.set_route(vec_of_history[vec_index+1].clone());
-        nav.set_history_index(current_index+1);
+        nav.set_route(vec_of_history[vec_index + 1].clone());
+        nav.set_history_index(current_index + 1);
     });
 
 
-    let host = cpal::default_host();
-    let mut device = None;
-    for _ in 1..3 {
-        device = Some(host.output_devices().unwrap()
-            .find(|d| {
-                if let Ok(name) = d.name() {
-                    // ALSA device names may include "hw:2,0" or "hw-2-0"
-                    // You might need to tune this filter depending on your device naming
-                    println!("device: {} contains {}: {}", name, "sysdefault:CARD=A", name.contains("sysdefault:CARD=A"));
-                    name.contains("sysdefault:CARD=A")
-                } else {
-                    false
-                }
-            })).unwrap();
-
-
-        if device.is_some() {
-            break;
-        }
-    }
-
-    if !device.is_some() {
-        device = Some(host.default_output_device().unwrap());
-    }
-
-    let selected_device = device.unwrap();
-    let default_config = selected_device.default_output_config().ok().unwrap();
-    let sample_rate = default_config.sample_rate().0;
-    let channel_count = default_config.channels();
-    let sample_format = default_config.sample_format();
-
-
-    let mut backend = backends::CpalBackend::new(channel_count,
-                                                 sample_rate,
-                                                 CpalBufferSize::Default,
-                                                 selected_device,
-                                                 sample_format);
-
-    let manager = backend.start(|error| eprintln!("error with cpal output stream: {}", error)).unwrap();
-
-    let player = Player::new(manager);
-
-    // Spawn background player task
-    tokio::spawn(player_task(player, rx));
-    
-    /*
-
-    // Spawn the audio background service
-    tokio::spawn(async move {
-        while let Some(cmd) = rx.recv().await {
-            // Here, handle command (e.g. play, pause, ...) using your player backend
-            // Pretend playback happens here
-            slint::invoke_from_event_loop({
-                let ui_handle = ui_handle.clone();
-                move || {
-                    let ui = ui_handle.unwrap();
-                    // ui.set_status(SharedString::from(format!("Handled: {:?}", cmd)));
-                }
-            }).unwrap();
-
-            match cmd {
-                PlayerCommand::Play(file_name) => {
-
-                }
-                // ...
-                _ => {}
-            }
-        }
-    });
-    */
     ui.run()
 }
 
-
-
-fn init_audio() {
-    
-    
-    /*
-            // List output devices and find one that roughly matches "hw:2,0" or its ALSA name
-            let device = host.output_devices().unwrap()
-                .find(|d| {
-                    if let Ok(name) = d.name() {
-                        // ALSA device names may include "hw:2,0" or "hw-2-0"
-                        // You might need to tune this filter depending on your device naming
-                        name.contains("hw:2,0") || name.contains("hw-2-0")
-                    } else {
-                        false
-                    }
-                })
-                .ok_or("Desired device hw:2,0 not found")?;
-
-            println!("Using output device: {}", device.name()?);
-    */
-
-
-
-
-    /*
-            let sound: Box<dyn Sound> = Box::new(awedio::sounds::SineWave::new(100.0));
-            manager.play(sound);
-            let mut is_playing = true;
-    */
-    // let ui_handle = ui.as_weak();
-    /*
-            ui.on_run_code_callback(move |extension| {
-                if is_playing {
-                    manager.clear();
-                    is_playing = false;
-                } else {
-                    let mut sound: Box<dyn Sound> = Box::new(awedio::sounds::SineWave::new(100.0));
-
-                    if extension != "sine" {
-                        let audio_file = format!("/root/test.{extension}");
-                        if fs::metadata(audio_file.clone()).is_ok() {
-                            sound = awedio::sounds::open_file(audio_file.clone()).unwrap();
-                        } else {
-                            println!("Audiofile does not exist: {}", audio_file.clone());
-                        }
-                    }
-
-                    manager.play(sound);
-                    is_playing = true;
-                }
-                // std::thread::sleep(std::time::Duration::from_millis(3000));
-
-            });*/
-}
