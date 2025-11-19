@@ -1,34 +1,53 @@
 use std::io::Write;
+use tokio::sync::mpsc;
+use std::time::Duration;
 mod player;
+mod rodio;
 
 use std::fs::OpenOptions;
-use rodio::cpal::traits::HostTrait;
-use rodio::{DeviceTrait, Source};
+
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::iter;
 use std::path::Path;
 use slint::private_unstable_api::re_exports::euclid::num::Round;
+use crate::player::{Player, PlayerCommand, PlayerEvent};
 
 slint::include_modules!();
 
 
 
-#[derive(Debug)]
-enum PlayerCommand { Play(String), Pause, Next, Previous, FastForward, Rewind }
-
-
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+
+    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+    let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
+    let worker = Player {
+        name: "player".to_string()
+    };
+
+    // Spawn the background worker
+    tokio::spawn(worker.run(cmd_rx, evt_tx));
+
+    // Spawn receiver for worker events
+    tokio::spawn(async move {
+        while let Some(event) = evt_rx.recv().await {
+            println!("Received event: {:?}", event);
+        }
+    });
+
+    // Example: send command to update the string
+    cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
+
+
     let ui = MainWindow::new()?;
     let ui_handle = ui.as_weak();
 
 
     let audioPlayer = ui.global::<SlintAudioPlayer>();
     audioPlayer.on_play({
-
-        // let tx = tx.clone();
+        let tx = cmd_tx.clone();
         move |file_name: SharedString| {
-            // tx.send(PlayerCommand::Play(file_name.to_string())).unwrap();
+            tx.send(PlayerCommand::Update(file_name.to_string())).unwrap();
         }
     });
 
@@ -51,10 +70,6 @@ async fn main() -> Result<(), slint::PlatformError> {
         println!("brightness: {}", brightness_target_value);
         
         println!("color-scheme: {}", pref.get_color_scheme());
-        
-        
-
-
     });
 
     let navigation = ui.global::<SlintNavigation>();

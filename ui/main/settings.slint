@@ -3,10 +3,11 @@ import {
     Palette,
     Slider,
     Switch,
-    VerticalBox,
+    VerticalBox, Button,
 } from "std-widgets.slint";
 
-import {SlintPreferences} from "../globals.slint";
+
+import {SlintPreferences, SlintAudioPlayer} from "../globals.slint";
 
 export component Settings {
     VerticalBox {
@@ -38,6 +39,18 @@ export component Settings {
                 }
             }
         }
+
+        VerticalBox {
+            Button {
+                text: "Play test audio";
+                clicked => {
+                    SlintAudioPlayer.play("preftest");
+                }
+
+            }
+
+        }
+
 
     }
 }
