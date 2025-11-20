@@ -1,15 +1,30 @@
 use std::io::Write;
 use tokio::sync::mpsc;
 use std::time::Duration;
-mod player;
-mod rodio;
-
+use clap::Parser;
 use std::fs::OpenOptions;
 
-use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
+mod player;
+
+
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value = "./")]
+    base_directory: String,
+}
+
+use slint::{
+    ComponentHandle,
+    Model,
+    ModelRc,
+    SharedString,
+    VecModel,
+    private_unstable_api::re_exports::euclid::num::{Round}
+};
 use std::iter;
 use std::path::Path;
-use slint::private_unstable_api::re_exports::euclid::num::Round;
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 
 slint::include_modules!();
@@ -18,6 +33,12 @@ slint::include_modules!();
 
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+
+    let args = Args::parse();
+    println!("{}", args.base_directory);
+
+    
+
 
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
