@@ -21,7 +21,7 @@ import { Settings } from "main/settings.slint";
 
 export component MainWindow inherits Window {
     default-font-family: "Lato";
-    default-font-size: 14pt;
+    default-font-size: 16pt;
 
     in-out property <physical-length> swipe-area-width: 50px;
 
@@ -36,34 +36,19 @@ export component MainWindow inherits Window {
 
     }
 
-    SwipeGestureHandler {
+    TouchArea {
         x: 0;
         y: 0;
         width: swipe-area-width;
         height: 100%;
-        handle-swipe-right: true;
-        handle-swipe-left: false;
-        swiped => {
-            SlintNavigation.back()
+        double-clicked => {
+            SlintNavigation.back();
         }
     }
 
-    VerticalBox {
-        HorizontalBox {
-            Button {
-                text: "<";
-                clicked => {
-                    SlintNavigation.back();
-                }
-            }
 
-            Button {
-                text: ">";
-                clicked => {
-                    SlintNavigation.forward();
-                }
-            }
-        }
+    VerticalBox {
+        padding: 0;
 
         ScrollView {
             if SlintNavigation.route[0] == "home": Home { }
@@ -73,16 +58,13 @@ export component MainWindow inherits Window {
             if SlintNavigation.route[0] == "search": Search { }
         }
     }
-
-    SwipeGestureHandler {
+    TouchArea {
         x: root.width - swipe-area-width;
         y: 0;
         width: swipe-area-width;
         height: 100%;
-        handle-swipe-right: false;
-        handle-swipe-left: true;
-        swiped => {
-            SlintNavigation.forward()
+        double-clicked => {
+            SlintNavigation.forward();
         }
     }
 }
