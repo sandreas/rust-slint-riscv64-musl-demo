@@ -16,7 +16,10 @@ pub enum PlayerCommand {
 
     Update(String),
     PlayTest(),
-    Stop,
+    PlayMedia(String),
+    Pause(),
+    Stop(),
+    Play(),
 }
 
 #[derive(Debug)]
@@ -107,23 +110,20 @@ impl Player {
     }
 
 
-    fn play(self) {
-        self.sink.play();
+    fn play(sink: &Sink) {
+        sink.play();
     }
 
-    fn pause(self) {
-        self.sink.pause()
+    fn pause(sink: &Sink) {
+        sink.pause()
     }
 
-    fn try_seek(self, position: Duration) -> Result<(), SeekError> {
-        self.sink.try_seek(position)
+    fn try_seek(sink: &Sink, position: Duration) -> Result<(), SeekError> {
+        sink.try_seek(position)
     }
 
     // todo:
     // next, previous, set_volume, set_speed
-
-
-
 
 
 
@@ -147,7 +147,16 @@ impl Player {
                         PlayerCommand::PlayTest() => {
                             Player::play_test(sink).await;
                         }
-                        PlayerCommand::Stop => {
+                        PlayerCommand::PlayMedia(s) => {
+                            Player::play_media(sink, s).await;
+                        }
+                        PlayerCommand::Play() => {
+                            Player::play(sink);
+                        }
+                        PlayerCommand::Pause() => {
+                            Player::pause(sink);
+                        }
+                        PlayerCommand::Stop() => {
                             let _ = evt_tx.send(PlayerEvent::Stopped);
                             break;
                         }

@@ -23,6 +23,7 @@ use slint::{
 };
 use std::iter;
 use std::path::Path;
+use std::rc::Rc;
 
 slint::include_modules!();
 
@@ -50,24 +51,47 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
 
     // Example: send command to update the string
-    cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
+    // cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
+
+    // Wrap in a VecModel, then ModelRc
+    let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
+    let model = Rc::new(VecModel::from(files));
+    let model_rc = ModelRc::from(model);
+
 
 
     let slint_app_window = MainWindow::new()?;
+    slint_app_window.set_files(model_rc);
+
     // let slint_app_window_weak = slint_app_window.as_weak();
 
 
     let slint_audio_player = slint_app_window.global::<SlintAudioPlayer>();
-    slint_audio_player.on_play({
-        let tx = cmd_tx.clone();
-        move |file_name: SharedString| {
-            tx.send(PlayerCommand::Update(file_name.to_string())).unwrap();
-        }
-    });
     slint_audio_player.on_play_test({
         let tx = cmd_tx.clone();
         move || {
             tx.send(PlayerCommand::PlayTest()).unwrap();
+        }
+    });
+
+    slint_audio_player.on_play_media({
+        let tx = cmd_tx.clone();
+        move |file_name: SharedString| {
+            tx.send(PlayerCommand::PlayMedia(file_name.to_string())).unwrap();
+        }
+    });
+
+    slint_audio_player.on_play({
+        let tx = cmd_tx.clone();
+        move || {
+            tx.send(PlayerCommand::Play()).unwrap();
+        }
+    });
+
+    slint_audio_player.on_pause({
+        let tx = cmd_tx.clone();
+        move || {
+            tx.send(PlayerCommand::Pause()).unwrap();
         }
     });
 
