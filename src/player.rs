@@ -3,15 +3,19 @@
 
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
-use rodio::{OutputStream, OutputStreamBuilder, Sink};
+use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
 use std::fs::File;
 use std::path::Path;
 use std::time::Duration;
+use rodio::source::SeekError;
 use tokio::sync::mpsc;
+use tokio::time::sleep;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
+
     Update(String),
+    PlayTest(),
     Stop,
 }
 
@@ -78,20 +82,22 @@ impl Player {
         builder
     }
 
-    async fn play_media(sink:&Sink, id: String) {
-        if id != "preftest" {
-            return;
+    async fn play_test(sink: &Sink) {
+        let waves = vec!(230f32, 270f32, 330f32,270f32, 230f32);
+        for w in waves {
+            let source = rodio::source::SineWave::new(w).amplify(0.1);
+            sink.append(source);
+            sink.play();
+            sleep(Duration::from_millis(200)).await;
+            sink.stop();
+            sink.clear();
         }
+    }
 
-        let path_string = "/tmp/alert-work.ogg";
-        let path_string_alternative = "/root/alert-work.ogg";
-        let mut path = Path::new(path_string);
+    async fn play_media(sink:&Sink, id: String) {
+        let mut path = Path::new(&id);
         if !path.exists() {
-            path = Path::new(path_string_alternative);
-            if !path.exists() {
-                return;
-            }
-
+            return
         }
 
         let file = File::open(path).unwrap();
@@ -100,12 +106,26 @@ impl Player {
         sink.play();
     }
 
-    /*
-    fn play(&mut self) -> bool {
+
+    fn play(self) {
         self.sink.play();
-        true
     }
-*/
+
+    fn pause(self) {
+        self.sink.pause()
+    }
+
+    fn try_seek(self, position: Duration) -> Result<(), SeekError> {
+        self.sink.try_seek(position)
+    }
+
+    // todo:
+    // next, previous, set_volume, set_speed
+
+
+
+
+
 
     pub async fn run(
         &mut self,
@@ -119,11 +139,13 @@ impl Player {
             tokio::select! {
                 Some(cmd) = cmd_rx.recv() => {
                     match cmd {
-
                         PlayerCommand::Update(s) => {
                             let x = s.clone();
                             Player::play_media(sink, s.clone()).await;
                             let _ = evt_tx.send(PlayerEvent::Status(format!("Playing {}", x)));
+                        }
+                        PlayerCommand::PlayTest() => {
+                            Player::play_test(sink).await;
                         }
                         PlayerCommand::Stop => {
                             let _ = evt_tx.send(PlayerEvent::Stopped);

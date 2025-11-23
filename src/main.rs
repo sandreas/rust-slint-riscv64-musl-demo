@@ -64,7 +64,12 @@ async fn main() -> Result<(), slint::PlatformError> {
             tx.send(PlayerCommand::Update(file_name.to_string())).unwrap();
         }
     });
-
+    slint_audio_player.on_play_test({
+        let tx = cmd_tx.clone();
+        move || {
+            tx.send(PlayerCommand::PlayTest()).unwrap();
+        }
+    });
 
     let slint_preferences = slint_app_window.global::<SlintPreferences>();
     let preferences_ui = slint_app_window.clone_strong();
