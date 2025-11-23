@@ -4,7 +4,7 @@ use std::io::Write;
 use tokio::sync::mpsc;
 
 mod player;
-
+mod music_player;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -38,7 +38,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     println!("{}", args.base_directory);
 
 
-
+/*
     let host = cpal::default_host();
     let mut device = None;
     for _ in 1..3 {
@@ -70,12 +70,7 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
     let selected_device = device.unwrap();
-    /*
-    let default_config = selected_device.default_output_config().ok().unwrap();
-    let sample_rate = default_config.sample_rate().0;
-    let channel_count = default_config.channels();
-    let sample_format = default_config.sample_format();
-    */
+
 
     let builder_result = OutputStreamBuilder::from_device(selected_device);
     let builder = builder_result.unwrap();
@@ -86,14 +81,17 @@ async fn main() -> Result<(), slint::PlatformError> {
     let stream = builder.open_stream_or_fallback().unwrap();
 
     let sink = Sink::connect_new(stream.mixer());
-
+*/
 
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
-    let player = Player::new("player".to_string(), sink);
-
     // Spawn the background worker
-    tokio::spawn(player.run(cmd_rx, evt_tx));
+    // tokio::spawn(player.run(cmd_rx, evt_tx));
+
+    tokio::spawn(async move {
+        let mut player = Player::new("player".to_string(), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
+        player.run(cmd_rx, evt_tx).await;
+    });
 
     // Spawn receiver for worker events
     tokio::spawn(async move {
