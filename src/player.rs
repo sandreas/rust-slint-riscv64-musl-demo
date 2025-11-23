@@ -1,14 +1,13 @@
 // https://github.com/PaulWoitaschek/Voice/blob/main/core/playback/src/main/kotlin/voice/core/playback/player/VoicePlayer.kt
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 
+use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::Device;
 use rodio::{OutputStream, OutputStreamBuilder, Sink};
 use std::fs::File;
 use std::path::Path;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use cpal::Device;
-use cpal::traits::{DeviceTrait, HostTrait};
-use tokio::sync::{mpsc, Mutex};
+use std::time::Duration;
+use tokio::sync::mpsc;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
@@ -24,7 +23,7 @@ pub enum PlayerEvent {
 
 pub struct Player {
     pub name: String,
-    stream: OutputStream,
+    stream: OutputStream, // when removed, the samples do not play
     sink: Sink,
 }
 

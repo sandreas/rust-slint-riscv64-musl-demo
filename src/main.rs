@@ -4,7 +4,6 @@ use std::io::Write;
 use tokio::sync::mpsc;
 
 mod player;
-mod music_player;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -15,8 +14,6 @@ struct Args {
 }
 
 use crate::player::{Player, PlayerCommand, PlayerEvent};
-use cpal::traits::{DeviceTrait, HostTrait};
-use rodio::{OutputStreamBuilder, Sink};
 use slint::{
     ComponentHandle,
     Model,
