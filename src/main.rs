@@ -32,58 +32,10 @@ slint::include_modules!();
 async fn main() -> Result<(), slint::PlatformError> {
 
     let args = Args::parse();
-    println!("{}", args.base_directory);
-
-
-/*
-    let host = cpal::default_host();
-    let mut device = None;
-    for _ in 1..3 {
-        device = Some(host.output_devices().unwrap()
-            .find(|d| {
-                if let Ok(name) = d.name() {
-                    // sysdefault:CARD=A
-                    let match_string = "USB-C to 3.5mm Headphone Jack A";
-                    let match_string2 = "pipewire";
-                    // ALSA device names may include "hw:2,0" or "hw-2-0"
-                    // You might need to tune this filter depending on your device naming
-                    println!("device: {} contains {}: {}", name, match_string, name.contains(match_string));
-                    name.contains(match_string) || name.contains(match_string2)
-                } else {
-                    false
-                }
-            })).unwrap();
-
-
-        if device.is_some() {
-            break;
-        }
-    }
-
-    if !device.is_some() {
-        device = Some(host.default_output_device().unwrap());
-    }
-
-
-
-    let selected_device = device.unwrap();
-
-
-    let builder_result = OutputStreamBuilder::from_device(selected_device);
-    let builder = builder_result.unwrap();
-
-    // let builder = OutputStreamBuilder::from_default_device().unwrap();
-
-
-    let stream = builder.open_stream_or_fallback().unwrap();
-
-    let sink = Sink::connect_new(stream.mixer());
-*/
+    println!("base directory is: {}", args.base_directory);
 
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
-    // Spawn the background worker
-    // tokio::spawn(player.run(cmd_rx, evt_tx));
 
     tokio::spawn(async move {
         let mut player = Player::new("player".to_string(), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
@@ -99,8 +51,6 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     // Example: send command to update the string
     cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
-
-
 
 
     let slint_app_window = MainWindow::new()?;

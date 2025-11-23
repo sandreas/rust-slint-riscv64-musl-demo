@@ -95,19 +95,17 @@ impl Player {
         }
 
         let file = File::open(path).unwrap();
-
+        sink.clear();
         sink.append(rodio::Decoder::try_from(file).unwrap());
         sink.play();
-        sink.sleep_until_end();
-
     }
 
+    /*
     fn play(&mut self) -> bool {
         self.sink.play();
-        self.sink.sleep_until_end();
         true
     }
-
+*/
 
     pub async fn run(
         &mut self,
