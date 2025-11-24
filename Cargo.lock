@@ -4064,6 +4064,7 @@ dependencies = [
  "slint",
  "slint-build",
  "tokio",
+ "walkdir",
 ]
 
 [[package]]

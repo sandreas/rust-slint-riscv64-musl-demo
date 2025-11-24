@@ -4,6 +4,7 @@ use std::io::Write;
 use tokio::sync::mpsc;
 
 mod player;
+mod media_source;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
