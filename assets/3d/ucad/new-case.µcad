@@ -9,6 +9,7 @@ pub const OUTER_DEPTH = 11.60mm;
 pub const OUTER_WIDTH = 45.00mm;
 pub const OUTER_HEIGHT = 88.75mm;
 
+pub const CASE_HEIGHT = OUTER_HEIGHT - WALL_THICKNESS;
 
 pub const INNER_DEPTH = OUTER_DEPTH - 2 * WALL_THICKNESS;
 pub const INNER_WIDTH = OUTER_WIDTH - 2 * WALL_THICKNESS;
@@ -35,7 +36,7 @@ pub const DISPLAY_FULL_THICKNESS = DISPLAY_GLASS_THICKNESS + DISPLAY_FRAME_THICK
 
 pub part Case(rows = 2, columns = 4) {
     width = OUTER_WIDTH;
-    height = OUTER_HEIGHT;
+    height = CASE_HEIGHT;
     cap = Rect(width, height).extrude(WALL_THICKNESS);
     base = Frame(width, height, WALL_THICKNESS)
             .extrude(OUTER_DEPTH - WALL_THICKNESS);
@@ -47,7 +48,7 @@ pub part BottomWallHole() {
     width = INNER_WIDTH;
     height = WALL_THICKNESS;
     depth = OUTER_DEPTH - WALL_THICKNESS;
-    y_offset = OUTER_HEIGHT / 2  - WALL_THICKNESS / 2;
+    y_offset = CASE_HEIGHT / 2  - WALL_THICKNESS / 2;
     z_offset = WALL_THICKNESS;
     Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
 }
@@ -99,24 +100,25 @@ pub part TopCover() {
     width = INNER_WIDTH + rail_width * 2;
     height = INNER_HEIGHT + rail_width;
     depth = rail_height;
-
-    back_cover_rail = Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
+    y_offset=rail_height/2; //0.3mm;
+    back_cover_rail = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
 
     width = INNER_WIDTH;
     height = INNER_HEIGHT;
     depth = WALL_THICKNESS;
-    back_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=rail_width, z=0mm);
+    y_offset = rail_height;
+    back_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
 
     width = OUTER_WIDTH;
     height = WALL_THICKNESS;
     depth = OUTER_DEPTH;
-    y_offset = OUTER_HEIGHT/2 - WALL_THICKNESS + rail_width+0.1mm;
+    y_offset = CASE_HEIGHT/2 + rail_height;
     z_offset = -OUTER_DEPTH + WALL_THICKNESS;
     top_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
 
 
-    {back_cover_rail;back_cover;top_cover}.union();
-    // top_cover;
+    {back_cover_rail;back_cover;top_cover;}.union();
+    //
 }
 
 pub part DisplayRail() {
@@ -128,7 +130,8 @@ pub part CaseWithDisplayHole() {
 }
 
 pub part CaseWithDisplayHoleAndRail() {
-    CaseWithDisplayHole(); DisplayRail().translate(y=16.8mm, z=WALL_THICKNESS);
+    y_offset = OUTER_HEIGHT / 2 - DISPLAY_GLASS_HEIGHT / 2;
+    CaseWithDisplayHole(); DisplayRail().translate(y=y_offset, z=WALL_THICKNESS);
 }
 
 
@@ -138,6 +141,6 @@ pub part CaseWithDisplayHoleAndRail() {
 // {Case();DisplayRail().translate(y=-15.6mm, z=WALL_THICKNESS)}.union() - DisplayHole();
 // DisplayRailHousing() - Display();
 // DisplayRail();
-TopCover();
+TopCover().translate(y=0mm, z=INNER_DEPTH+WALL_THICKNESS+0mm);
 // DisplayRail().translate(y=15.6mm, z=WALL_THICKNESS);
-// CaseWithDisplayHoleAndRail();
+CaseWithDisplayHoleAndRail();
