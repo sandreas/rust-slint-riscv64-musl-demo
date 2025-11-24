@@ -1,0 +1,143 @@
+use std::geo2d::*;
+use std::ops::*;
+use std::math::*;
+
+
+pub const WALL_THICKNESS = 1.25mm;
+
+pub const OUTER_DEPTH = 11.60mm;
+pub const OUTER_WIDTH = 45.00mm;
+pub const OUTER_HEIGHT = 88.75mm;
+
+
+pub const INNER_DEPTH = OUTER_DEPTH - 2 * WALL_THICKNESS;
+pub const INNER_WIDTH = OUTER_WIDTH - 2 * WALL_THICKNESS;
+pub const INNER_HEIGHT = OUTER_HEIGHT - 2 * WALL_THICKNESS;
+
+// Glass: 38.34 x 56.37 x 1.36mm
+// Frame: 36.15 x 55.88 x 2mm
+// Visible Area: 32.02 x 48.02
+pub const DISPLAY_HOLE_WIDTH = 32.02mm + 1.98mm;
+pub const DISPLAY_HOLE_HEIGHT = 48.02mm + 1.98mm;
+
+pub const DISPLAY_GLASS_WIDTH = 38.34mm;
+pub const DISPLAY_GLASS_HEIGHT = 56.37mm;
+pub const DISPLAY_GLASS_THICKNESS = 1.36mm;
+
+pub const DISPLAY_FRAME_WIDTH = 36.15mm;
+pub const DISPLAY_FRAME_HEIGHT = 55.88mm;
+pub const DISPLAY_FRAME_THICKNESS = 2.00mm;
+
+pub const DISPLAY_FULL_THICKNESS = DISPLAY_GLASS_THICKNESS + DISPLAY_FRAME_THICKNESS;
+
+
+
+
+pub part Case(rows = 2, columns = 4) {
+    width = OUTER_WIDTH;
+    height = OUTER_HEIGHT;
+    cap = Rect(width, height).extrude(WALL_THICKNESS);
+    base = Frame(width, height, WALL_THICKNESS)
+            .extrude(OUTER_DEPTH - WALL_THICKNESS);
+    bottom_hole = BottomWallHole();
+    {  cap;  base;}.align(Z).union() - bottom_hole;
+}
+
+pub part BottomWallHole() {
+    width = INNER_WIDTH;
+    height = WALL_THICKNESS;
+    depth = OUTER_DEPTH - WALL_THICKNESS;
+    y_offset = OUTER_HEIGHT / 2  - WALL_THICKNESS / 2;
+    z_offset = WALL_THICKNESS;
+    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
+}
+
+pub part DisplayHole() {
+    width = DISPLAY_HOLE_WIDTH;
+    height = DISPLAY_HOLE_HEIGHT;
+    depth = WALL_THICKNESS;
+    y_offset =  INNER_HEIGHT / 2 - DISPLAY_HOLE_HEIGHT / 2 - WALL_THICKNESS;
+    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
+}
+
+pub part DisplayGlass() {
+    width = DISPLAY_GLASS_WIDTH;
+    height = DISPLAY_GLASS_HEIGHT;
+    depth = DISPLAY_GLASS_THICKNESS;
+    Rect(width, height).extrude(depth);
+}
+
+pub part DisplayFrame() {
+    width = DISPLAY_FRAME_WIDTH;
+    height = DISPLAY_FRAME_HEIGHT;
+    depth = DISPLAY_FRAME_THICKNESS;
+    Rect(width, height).extrude(depth);
+}
+
+pub part Display() {
+    glass = DisplayGlass();
+    frame = DisplayFrame();
+    {glass;frame;}.align(Z).union();
+}
+
+pub part DisplayRailHousing() {
+    width = INNER_WIDTH;
+    height = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
+    depth = DISPLAY_FULL_THICKNESS;
+    display_rail_housing = Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
+
+    shave_offset = ( height / 2);
+    shave_top = Rect(width, WALL_THICKNESS * 2).extrude(depth).translate(x=0mm, y=shave_offset, z=0mm);
+    display_rail_housing - shave_top
+
+    // display_rail_housing;
+}
+
+pub part TopCover() {
+    rail_width = 0.6mm;
+    rail_height = 0.6mm;
+    width = INNER_WIDTH + rail_width * 2;
+    height = INNER_HEIGHT + rail_width;
+    depth = rail_height;
+
+    back_cover_rail = Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
+
+    width = INNER_WIDTH;
+    height = INNER_HEIGHT;
+    depth = WALL_THICKNESS;
+    back_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=rail_width, z=0mm);
+
+    width = OUTER_WIDTH;
+    height = WALL_THICKNESS;
+    depth = OUTER_DEPTH;
+    y_offset = OUTER_HEIGHT/2 - WALL_THICKNESS + rail_width+0.1mm;
+    z_offset = -OUTER_DEPTH + WALL_THICKNESS;
+    top_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
+
+
+    {back_cover_rail;back_cover;top_cover}.union();
+    // top_cover;
+}
+
+pub part DisplayRail() {
+    DisplayRailHousing() - Display()
+}
+
+pub part CaseWithDisplayHole() {
+    Case() - DisplayHole()
+}
+
+pub part CaseWithDisplayHoleAndRail() {
+    CaseWithDisplayHole(); DisplayRail().translate(y=16.8mm, z=WALL_THICKNESS);
+}
+
+
+
+
+// y_offset=DISPLAY_INNER_HEIGHT/2;
+// {Case();DisplayRail().translate(y=-15.6mm, z=WALL_THICKNESS)}.union() - DisplayHole();
+// DisplayRailHousing() - Display();
+// DisplayRail();
+TopCover();
+// DisplayRail().translate(y=15.6mm, z=WALL_THICKNESS);
+// CaseWithDisplayHoleAndRail();
