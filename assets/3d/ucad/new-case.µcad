@@ -2,7 +2,21 @@ use std::geo2d::*;
 use std::ops::*;
 use std::math::*;
 
+// 4mm height camera stand
+// 14.00mm from usb-c board end
+// 3.5mm from sides
+// 1.00mm overstand USB-C
+// TP4057: 12.00mm
+// 12.00mm (tp4057) + 23 (lichee) = 35
+// 42.5 - 35 = 7.5mm
+// USB-C is bottom, SD is top
 
+// 17.50mm TP4057 length (incl USB-C)
+// 23.00mm Lichee width
+// 17.50 + 23.00 = 40.50mm vs 42.50mm
+// TP4057 12.00mm x 17.50mm (incl USB-C)
+// Gauge: 10.00mm x 24.00mm
+// Lichee: 22.90mm x 35.60mm
 pub const WALL_THICKNESS = 1.25mm;
 
 pub const OUTER_DEPTH = 11.60mm;
@@ -82,7 +96,7 @@ pub part Display() {
 }
 
 pub part DisplayRailShaveBottom() {
-    width = DISPLAY_FRAME_WIDTH - WALL_THICKNESS * 2;
+    width = DISPLAY_FRAME_WIDTH;
     height = 20mm;
     depth = 5mm;
     y_offset = -10mm;
@@ -169,5 +183,5 @@ pub part TopCoverUpsideDown() {
 CaseWithDisplayAndTopCoverHoles();
 
 
-// #[export = "player-backcover.stl"]
+#[export = "player-backcover.stl"]
 TopCoverUpsideDown();
