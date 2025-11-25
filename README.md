@@ -12,6 +12,9 @@ Here is how it looks at the moment:
 ![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
 
 
+And here is a draft for the case:
+
+![3d-case-draft.jpg](assets/img/3d-case-draft.jpg)
 
 # Prerequisites
 
