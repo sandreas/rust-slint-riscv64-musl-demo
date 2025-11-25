@@ -16,6 +16,16 @@ And here is a draft for the case:
 
 ![3d-case-draft.jpg](assets/img/3d-case-draft.jpg)
 
+Dimensions are:
+- 45.00mm x 88.75mm 11.60mm (w x h x d)
+- 1.25mm wall thickness
+
+It is planned that the display slides in where the hole is, the PCBs are
+clicked into the empty bottom part and after soldering the wires the
+back-cover slides into the rail to close the main case.
+To secure the back cover, screw two small screws through the top-plate 
+into the display rails (holes for these are planned).
+
 # Prerequisites
 
 ## Hardware
