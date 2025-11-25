@@ -134,13 +134,29 @@ pub part CaseWithDisplayHoleAndRail() {
     CaseWithDisplayHole(); DisplayRail().translate(y=y_offset, z=WALL_THICKNESS);
 }
 
+pub part TopCoverHole() {
+    TopCover().translate(y=0mm, z=INNER_DEPTH+WALL_THICKNESS + 0mm);
+}
 
+pub part CaseWithDisplayAndTopCoverHoles() {
+    CaseWithDisplayHoleAndRail() - TopCoverHole();
+}
 
+pub part TopCoverUpsideDown() {
+    x_offset=OUTER_WIDTH + 20mm;
+    TopCover().translate(x=x_offset).reflect(Z).align(Z);
+}
 
 // y_offset=DISPLAY_INNER_HEIGHT/2;
 // {Case();DisplayRail().translate(y=-15.6mm, z=WALL_THICKNESS)}.union() - DisplayHole();
 // DisplayRailHousing() - Display();
 // DisplayRail();
-TopCover().translate(y=0mm, z=INNER_DEPTH+WALL_THICKNESS+0mm);
 // DisplayRail().translate(y=15.6mm, z=WALL_THICKNESS);
-CaseWithDisplayHoleAndRail();
+
+// TopCover().rotate(180°);
+
+#[export = "player-case.stl"]
+CaseWithDisplayAndTopCoverHoles();
+
+#[export = "player-backcover.stl"]
+TopCoverUpsideDown();
