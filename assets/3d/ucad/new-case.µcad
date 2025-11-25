@@ -81,17 +81,27 @@ pub part Display() {
     {glass;frame;}.align(Z).union();
 }
 
+pub part DisplayRailShaveBottom() {
+    width = DISPLAY_FRAME_WIDTH - WALL_THICKNESS * 2;
+    height = 20mm;
+    depth = 5mm;
+    y_offset = -10mm;
+    z_offset = 0mm;
+    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
+}
+
+
+
 pub part DisplayRailHousing() {
     width = INNER_WIDTH;
     height = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
     depth = DISPLAY_FULL_THICKNESS;
-    display_rail_housing = Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
+    display_rail_housing = Rect(width, height).extrude(depth);
 
     shave_offset = ( height / 2);
     shave_top = Rect(width, WALL_THICKNESS * 2).extrude(depth).translate(x=0mm, y=shave_offset, z=0mm);
-    display_rail_housing - shave_top
 
-    // display_rail_housing;
+    display_rail_housing - shave_top;
 }
 
 pub part TopCover() {
@@ -122,7 +132,7 @@ pub part TopCover() {
 }
 
 pub part DisplayRail() {
-    DisplayRailHousing() - Display()
+    {DisplayRailHousing() - Display()}.union() - DisplayRailShaveBottom().translate(y=-15mm);
 }
 
 pub part CaseWithDisplayHole() {
@@ -158,5 +168,6 @@ pub part TopCoverUpsideDown() {
 #[export = "player-case.stl"]
 CaseWithDisplayAndTopCoverHoles();
 
-#[export = "player-backcover.stl"]
+
+// #[export = "player-backcover.stl"]
 TopCoverUpsideDown();
