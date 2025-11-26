@@ -2,24 +2,8 @@ use std::geo2d::*;
 use std::ops::*;
 use std::math::*;
 
-// SMD-Buttons: 3.5 x 6.0 x 2.5mm (w, h, d)
-
-// 4mm height camera stand
-// 14.00mm from usb-c board end
-// 3.5mm from sides
-// 1.00mm overstand USB-C
-// TP4057: 12.00mm
-// 12.00mm (tp4057) + 23 (lichee) = 35
-// 42.5 - 35 = 7.5mm
-// USB-C is bottom, SD is top
-
-// 17.50mm TP4057 length (incl USB-C)
-// 23.00mm Lichee width
-// 17.50 + 23.00 = 40.50mm vs 42.50mm
-// TP4057 12.00mm x 17.50mm (incl USB-C)
-// Gauge: 10.00mm x 24.00mm
-// Lichee: 22.90mm x 35.60mm
 pub const WALL_THICKNESS = 1.25mm;
+pub const RAIL_THICKNESS = 0.6mm;
 
 pub const OUTER_DEPTH = 11.60mm;
 pub const OUTER_WIDTH = 45.00mm;
@@ -31,9 +15,6 @@ pub const INNER_DEPTH = OUTER_DEPTH - 2 * WALL_THICKNESS;
 pub const INNER_WIDTH = OUTER_WIDTH - 2 * WALL_THICKNESS;
 pub const INNER_HEIGHT = OUTER_HEIGHT - 2 * WALL_THICKNESS;
 
-// Glass: 38.34 x 56.37 x 1.36mm
-// Frame: 36.15 x 55.88 x 2mm
-// Visible Area: 32.02 x 48.02
 pub const DISPLAY_HOLE_WIDTH = 32.02mm + 1.98mm;
 pub const DISPLAY_HOLE_HEIGHT = 48.02mm + 1.98mm;
 
@@ -51,19 +32,129 @@ pub const LICHEE_PCB_HEIGHT=35.60mm;
 pub const LICHEE_PCB_DEPTH=1.00mm;
 
 
+pub part _DisplayGlass() {
+    width = DISPLAY_GLASS_WIDTH;
+    height = DISPLAY_GLASS_HEIGHT;
+    depth = DISPLAY_GLASS_THICKNESS;
+    Rect(width, height).extrude(depth);
+}
+
+pub part _DisplayFrame() {
+    width = DISPLAY_FRAME_WIDTH;
+    height = DISPLAY_FRAME_HEIGHT;
+    depth = DISPLAY_FRAME_THICKNESS;
+    Rect(width, height).extrude(depth);
+}
+
+pub part Display() {
+    {_DisplayGlass();_DisplayFrame();}.align(Z).union();
+}
+
+pub part ActionButton() {
+    radius = 2.0mm;
+    depth = WALL_THICKNESS / 2;
+    holder = Circle(radius + 0.6mm).extrude(depth);
+    button = Circle(radius).extrude(depth+1.5mm);
+
+    {holder;button}.align(Z).union();
+}
+
+pub part _BackCoverRail() {
+    width = INNER_WIDTH + RAIL_THICKNESS * 2;
+    height = INNER_HEIGHT + RAIL_THICKNESS;
+    depth = RAIL_THICKNESS;
+    y_offset=RAIL_THICKNESS/2;
+    Rect(width, height).extrude(depth);
+}
+
+pub part _BackCoverFiller() {
+    width = INNER_WIDTH;
+    height = INNER_HEIGHT;
+    depth = WALL_THICKNESS;
+    y_offset = RAIL_THICKNESS / 2;
+    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
+}
+
+pub part _BackCoverBack() {
+    {_BackCoverRail();_BackCoverFiller();}.align(Z).union();
+}
+
+pub part _BackCoverTop() {
+    width = OUTER_WIDTH;
+    height = WALL_THICKNESS;
+    depth = OUTER_DEPTH;
+    y_offset = CASE_HEIGHT/2 + RAIL_THICKNESS / 2;
+    Rect(width, height).extrude(depth).translate(y=y_offset);
+}
+
+pub part BackCover() {
+    {_BackCoverRail();_BackCoverFiller();}.align(Z).union();
+}
+
+pub part _DisplayRailHousing() {
+    width = INNER_WIDTH;
+    height = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
+    depth = DISPLAY_FULL_THICKNESS;
+    Rect(width, height).extrude(depth);
+}
+
+pub part DisplayRail() {
+    {_DisplayRailHousing() - Display() - Display().translate(y=0.87mm)}.align(Z).union();
+}
+
+pub part HomeButton() {
+    radius = 5.00mm;
+    depth = WALL_THICKNESS / 2;
+    {Circle(radius + 2mm).extrude(depth);Circle(radius).extrude(depth);}.align(Z).union();
+}
 
 
+pub part UsbCPort() {
+    border_width = 0.6mm;
+    width = 8.4mm;
+    height = 2.6mm;
+    depth = 7.5mm;
+    // Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
+    y_offset = 0mm; // LICHEE_PCB_HEIGHT / 2 + 1mm;
+    z_offset = 0mm; // LICHEE_PCB_DEPTH;
+    RoundedRect(width, height, radius = border_width).extrude(depth).rotate(x=90°).align(Z).translate(x=0mm, y=y_offset, z=z_offset);
+}
 
-pub part Case(rows = 2, columns = 4) {
+
+pub part _CaseFront() {
     width = OUTER_WIDTH;
     height = CASE_HEIGHT;
-    cap = Rect(width, height).extrude(WALL_THICKNESS);
-    base = Frame(width, height, WALL_THICKNESS)
-            .extrude(OUTER_DEPTH - WALL_THICKNESS);
-    bottom_hole = BottomWallHole();
-
-    {  cap;  base;}.align(Z).union() - bottom_hole;
+    Rect(width, height).extrude(WALL_THICKNESS);
 }
+
+pub part _CaseFrame() {
+    width = OUTER_WIDTH;
+    height = CASE_HEIGHT;
+    Frame(width, height, WALL_THICKNESS)
+            .extrude(OUTER_DEPTH - WALL_THICKNESS);
+}
+
+pub part _CaseBase() {
+    {  _CaseFront();  _CaseFrame();}.align(Z).union();
+}
+
+pub part _CaseBaseWithHoles() {
+    {  _CaseBase() - BackCover().reflect(Z).translate()}.union();
+}
+
+_CaseBase();
+
+
+
+
+
+
+
+
+
+
+
+
 
 pub part BottomWallHole() {
     width = INNER_WIDTH;
@@ -82,90 +173,12 @@ pub part DisplayHole() {
     Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
 }
 
-pub part DisplayGlass() {
-    width = DISPLAY_GLASS_WIDTH;
-    height = DISPLAY_GLASS_HEIGHT;
-    depth = DISPLAY_GLASS_THICKNESS;
-    Rect(width, height).extrude(depth);
-}
-
-pub part DisplayFrame() {
-    width = DISPLAY_FRAME_WIDTH;
-    height = DISPLAY_FRAME_HEIGHT;
-    depth = DISPLAY_FRAME_THICKNESS;
-    Rect(width, height).extrude(depth);
-}
-
-pub part Display() {
-    glass = DisplayGlass();
-    frame = DisplayFrame();
-    {glass;frame;}.align(Z).union();
-}
-
-pub part DisplayRailShaveBottom() {
-    width = DISPLAY_FRAME_WIDTH;
-    height = 20mm;
-    depth = 5mm;
-    y_offset = -10mm;
-    z_offset = 0mm;
-    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
-}
-
-
-
-pub part DisplayRailHousing() {
-    width = INNER_WIDTH;
-    height = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
-    depth = DISPLAY_FULL_THICKNESS;
-    display_rail_housing = Rect(width, height).extrude(depth);
-
-    shave_offset = ( height / 2);
-    shave_top = Rect(width, WALL_THICKNESS * 2).extrude(depth).translate(x=0mm, y=shave_offset, z=0mm);
-
-    display_rail_housing - shave_top;
-}
-
-pub part TopCover() {
-    rail_width = 0.6mm;
-    rail_height = 0.6mm;
-    width = INNER_WIDTH + rail_width * 2;
-    height = INNER_HEIGHT + rail_width;
-    depth = rail_height;
-    y_offset=rail_height/2; //0.3mm;
-    back_cover_rail = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
-
-    width = INNER_WIDTH;
-    height = INNER_HEIGHT;
-    depth = WALL_THICKNESS;
-    y_offset = rail_height;
-    back_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
-
-    width = OUTER_WIDTH;
-    height = WALL_THICKNESS;
-    depth = OUTER_DEPTH;
-    y_offset = CASE_HEIGHT/2 + rail_height;
-    z_offset = -OUTER_DEPTH + WALL_THICKNESS;
-    top_cover = Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
-
-
-    {back_cover_rail;back_cover;top_cover;}.union();
-    //
-}
-
 pub part LicheeCenterSupport() {
     width=2mm;
     height=10mm;
     depth = INNER_DEPTH;
     Rect(width, height).extrude(depth);
 }
-
-
-pub part DisplayRail() {
-    // y_offset = -35mm;
-    // center_support = LicheeCenterSupport().translate(y=y_offset);
-    {DisplayRailHousing() - Display()}.union() - DisplayRailShaveBottom().translate(y=-15mm);
-}
-
 
 pub part CaseWithDisplayHole() {
     Case() - DisplayHole()
@@ -193,16 +206,7 @@ pub part LicheePcbShim() {
     Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
 }
 
-pub part LicheeUsbShim() {
-    border_width = 0.6mm;
-    width = 8.4mm;
-    height = 2.6mm;
-    depth = 7.5mm;
-    // Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
-    y_offset = LICHEE_PCB_HEIGHT / 2 + 1mm;
-    z_offset = LICHEE_PCB_DEPTH;
-    RoundedRect(width, height, radius = border_width).extrude(depth).rotate(x=90°).align(Z).translate(x=0mm, y=y_offset, z=z_offset);
-}
+
 
 pub part LicheeMicroSdShim() {
     // width = 11.10mm;
@@ -215,7 +219,7 @@ pub part LicheeMicroSdShim() {
 }
 
 pub part LicheeShim() {
-    LicheeUsbShim();
+    UsbCPort();
     LicheePcbShim();
     LicheeMicroSdShim();
 }
@@ -224,21 +228,9 @@ pub part CaseWithDisplayAndTopCoverHoles() {
     CaseWithDisplayHoleAndRail() - TopCoverHole();
 }
 
-pub part HomeButton() {
-    radius = 5.00mm;
-    depth = WALL_THICKNESS / 2;
-    Circle(radius).extrude(depth).translate(z=depth);
-    Circle(radius + 2mm).extrude(depth);
-}
 
-pub part ActionButton() {
-    // SMD-Buttons: 3.5 x 6.0 x 2.5mm (w, h, d)
-    // press goes from 2.5mm to 2.3mm thickness
-    radius = 2.0mm;
-    depth = WALL_THICKNESS / 2;
-    Circle(radius).extrude(depth+1.5mm).translate(z=depth);
-    Circle(radius + 0.6mm).extrude(depth);
-}
+
+
 
 pub part ActionButtonPositioned() {
     x_offset=-INNER_WIDTH / 2;
@@ -305,9 +297,9 @@ pub part CaseWithDisplay_TopCover_Lichee_HomeButton_ActionButtonHoles() {
 // HomeButton();
 // ActionButton();
 
-#[export = "player-case.stl"]
-CaseWithDisplay_TopCover_Lichee_HomeButton_ActionButtonHoles();
+// #[export = "player-case.stl"]
+// CaseWithDisplay_TopCover_Lichee_HomeButton_ActionButtonHoles();
 
-#[export = "player-backcover.stl"]
-TopCoverUpsideDown();
+// #[export = "player-backcover.stl"]
+// TopCoverUpsideDown();
 
