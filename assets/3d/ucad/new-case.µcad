@@ -10,6 +10,7 @@ pub const OUTER_WIDTH = 45.00mm;
 pub const OUTER_HEIGHT = 88.75mm;
 
 pub const CASE_HEIGHT = OUTER_HEIGHT - WALL_THICKNESS;
+pub const CASE_DEPTH = OUTER_DEPTH - WALL_THICKNESS;
 
 pub const INNER_DEPTH = OUTER_DEPTH - 2 * WALL_THICKNESS;
 pub const INNER_WIDTH = OUTER_WIDTH - 2 * WALL_THICKNESS;
@@ -25,6 +26,11 @@ pub const DISPLAY_GLASS_THICKNESS = 1.36mm;
 pub const DISPLAY_FRAME_WIDTH = 36.15mm;
 pub const DISPLAY_FRAME_HEIGHT = 55.88mm;
 pub const DISPLAY_FRAME_THICKNESS = 2.00mm;
+
+pub const DISPLAY_RAIL_HEIGHT = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
+
+
+
 pub const DISPLAY_FULL_THICKNESS = DISPLAY_GLASS_THICKNESS + DISPLAY_FRAME_THICKNESS;
 
 pub const LICHEE_PCB_WIDTH=22.90mm;
@@ -32,18 +38,20 @@ pub const LICHEE_PCB_HEIGHT=35.60mm;
 pub const LICHEE_PCB_DEPTH=1.00mm;
 
 
-pub part _DisplayGlass() {
+pub part _DisplayGlass(height=DISPLAY_GLASS_HEIGHT) {
     width = DISPLAY_GLASS_WIDTH;
-    height = DISPLAY_GLASS_HEIGHT;
     depth = DISPLAY_GLASS_THICKNESS;
     Rect(width, height).extrude(depth);
 }
 
-pub part _DisplayFrame() {
+pub part _DisplayFrame(height=DISPLAY_FRAME_HEIGHT) {
     width = DISPLAY_FRAME_WIDTH;
-    height = DISPLAY_FRAME_HEIGHT;
     depth = DISPLAY_FRAME_THICKNESS;
     Rect(width, height).extrude(depth);
+}
+
+pub part _DisplaySpacer(height=1mm) {
+    {_DisplayGlass(height);_DisplayFrame(height);}.align(Z).union();
 }
 
 pub part Display() {
@@ -70,7 +78,7 @@ pub part _BackCoverRail() {
 pub part _BackCoverFiller() {
     width = INNER_WIDTH;
     height = INNER_HEIGHT;
-    depth = WALL_THICKNESS;
+    depth = WALL_THICKNESS - RAIL_THICKNESS;
     y_offset = RAIL_THICKNESS / 2;
     Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
 }
@@ -88,18 +96,20 @@ pub part _BackCoverTop() {
 }
 
 pub part BackCover() {
-    {_BackCoverRail();_BackCoverFiller();}.align(Z).union();
+    z_offset = CASE_DEPTH;
+    {_BackCoverTop();_BackCoverBack().translate(z=z_offset)}.union();
 }
 
 pub part _DisplayRailHousing() {
     width = INNER_WIDTH;
-    height = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
+    height = DISPLAY_RAIL_HEIGHT;
     depth = DISPLAY_FULL_THICKNESS;
     Rect(width, height).extrude(depth);
 }
 
 pub part DisplayRail() {
-    {_DisplayRailHousing() - Display() - Display().translate(y=0.87mm)}.align(Z).union();
+    y_offset=0.87mm;
+    {_DisplayRailHousing() - Display() - _DisplaySpacer(DISPLAY_FRAME_HEIGHT).translate(y=y_offset)}.align(Z).union();
 }
 
 pub part HomeButton() {
@@ -123,26 +133,34 @@ pub part UsbCPort() {
 
 pub part _CaseFront() {
     width = OUTER_WIDTH;
-    height = CASE_HEIGHT;
+    height = OUTER_HEIGHT;
     Rect(width, height).extrude(WALL_THICKNESS);
 }
 
-pub part _CaseFrame() {
+pub part _CaseWalls() {
     width = OUTER_WIDTH;
-    height = CASE_HEIGHT;
+    height = OUTER_HEIGHT;
     Frame(width, height, WALL_THICKNESS)
-            .extrude(OUTER_DEPTH - WALL_THICKNESS);
+            .extrude(CASE_DEPTH);
 }
 
-pub part _CaseBase() {
-    {  _CaseFront();  _CaseFrame();}.align(Z).union();
+pub part _CaseFrame() {
+    {  _CaseFront();  _CaseWalls();}.align(Z).union();
 }
 
-pub part _CaseBaseWithHoles() {
-    {  _CaseBase() - BackCover().reflect(Z).translate()}.union();
+
+pub part _CaseFrameWithTopCoverRails() {
+    y_offset = -RAIL_THICKNESS / 2;
+    _CaseFrame() - BackCover().translate(y=y_offset);
 }
 
-_CaseBase();
+pub part _CaseFrameWithRails() {
+    y_offset = INNER_HEIGHT / 2 - DISPLAY_RAIL_HEIGHT / 2;
+    z_offset = WALL_THICKNESS;
+    {  _CaseFrameWithTopCoverRails(); DisplayRail().translate(y=y_offset,z=z_offset);}.union();
+}
+
+_CaseFrameWithRails();
 
 
 
