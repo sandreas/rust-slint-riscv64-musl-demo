@@ -49,6 +49,7 @@ pub const USB_C_DEPTH=7.5mm;
 pub const PUSH_BUTTON_WIDTH = 6.15mm; // 6.10mm real width
 pub const PUSH_BUTTON_HEIGHT = 3.95mm; // 3.91mm real height
 pub const PUSH_BUTTON_DEPTH = 1.65mm; // 1.60mm real depth
+pub const PUSH_BUTTON_DEPTH_KNOB = 2.25mm; // 2.18 real depth
 
 pub const PUSH_BUTTON_RADIUS = 0.95mm; // 0.90mm real radius
 pub const PUSH_BUTTON_BTN_DEPTH = 0.85mm; // 0.80mm real depth
@@ -290,13 +291,34 @@ pub part PrintVersionBackCover() {
 }
 
 pub part PrintVersionHomeButton() {
-    HomeButton().translate(x=-OUTER_WIDTH );
+    HomeButton().translate(x=-OUTER_WIDTH + 5mm );
 }
 
 pub part PrintVersionActionButton() {
-    ActionButton().translate(x=-OUTER_WIDTH - 10mm);
+    ActionButton().translate(x=-OUTER_WIDTH - 5mm);
 }
 
+
+pub part PushButtonHolder() {
+    extra_space = 0.6mm;
+    wall_extra = 0.05mm;
+    width = PUSH_BUTTON_WIDTH - 0.8mm;
+    height = PUSH_BUTTON_HEIGHT + extra_space;
+    depth = PUSH_BUTTON_DEPTH_KNOB + extra_space + wall_extra; // 2.25 + 0.6+0.3
+    x_offset=0.0mm;
+    y_offset=0.0mm;
+    z_offset=extra_space + wall_extra;
+    Rect(width, height).extrude(depth) - PushButton().translate(x=x_offset,y=y_offset,z=z_offset);
+}
+
+
+PushButtonHolder();
+
+/*
+x_offset = -INNER_WIDTH / 2 + 2.9mm;
+y_offset = 8.55mm;
+z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
+PushButtonHolder().rotate(x=90°, y=-90°).translate(x=x_offset, y=y_offset,z=z_offset);
 
 
 #[export = "player-case.stl"]
@@ -310,3 +332,4 @@ PrintVersionHomeButton();
 
 #[export = "player-action-button.stl"]
 PrintVersionActionButton();
+*/
