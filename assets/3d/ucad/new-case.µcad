@@ -29,13 +29,31 @@ pub const DISPLAY_FRAME_THICKNESS = 2.00mm;
 
 pub const DISPLAY_RAIL_HEIGHT = DISPLAY_GLASS_HEIGHT + WALL_THICKNESS;
 
-
-
 pub const DISPLAY_FULL_THICKNESS = DISPLAY_GLASS_THICKNESS + DISPLAY_FRAME_THICKNESS;
+
+pub const DISPLAY_INSET = (DISPLAY_GLASS_HEIGHT - DISPLAY_HOLE_HEIGHT) / 2;
 
 pub const LICHEE_PCB_WIDTH=22.90mm;
 pub const LICHEE_PCB_HEIGHT=35.60mm;
 pub const LICHEE_PCB_DEPTH=1.00mm;
+
+pub const MICRO_SD_WIDTH=14.00mm; // this technically is not correct (increased to make a bigger hole because the microSD slot is not centered)
+pub const MICRO_SD_HEIGHT=16.00mm;
+pub const MICRO_SD_DEPTH=1.50mm;
+
+pub const USB_C_WIDTH=8.4mm;
+pub const USB_C_HEIGHT=2.6mm;
+pub const USB_C_DEPTH=7.5mm;
+
+
+pub const PUSH_BUTTON_WIDTH = 6.15mm; // 6.10mm real width
+pub const PUSH_BUTTON_HEIGHT = 3.95mm; // 3.91mm real height
+pub const PUSH_BUTTON_DEPTH = 1.65mm; // 1.60mm real depth
+
+pub const PUSH_BUTTON_RADIUS = 0.95mm; // 0.90mm real radius
+pub const PUSH_BUTTON_BTN_DEPTH = 0.85mm; // 0.80mm real depth
+
+
 
 
 pub part _DisplayGlass(height=DISPLAY_GLASS_HEIGHT) {
@@ -61,10 +79,36 @@ pub part Display() {
 pub part ActionButton() {
     radius = 2.0mm;
     depth = WALL_THICKNESS / 2;
+    // stand = Circle(
+
     holder = Circle(radius + 0.6mm).extrude(depth);
     button = Circle(radius).extrude(depth+1.5mm);
 
     {holder;button}.align(Z).union();
+}
+
+pub part ActionButtonPositioned() {
+    x_offset=-INNER_WIDTH / 2;
+    z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
+
+    ActionButton().rotate(x=90°, y=-90°).translate(x=x_offset, z=z_offset);
+}
+
+
+pub part ActionButtonRow() {
+    top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
+
+    power_offset = top_offset - 5mm;
+    ActionButtonPositioned().translate(y=power_offset);
+
+    vol_up_offset = power_offset - 15mm;
+    ActionButtonPositioned().translate(y=vol_up_offset);
+
+    play_offset = vol_up_offset - 7mm;
+    ActionButtonPositioned().translate(y=play_offset);
+
+    vol_down_offset = play_offset - 7mm;
+    ActionButtonPositioned().translate(y=vol_down_offset);
 }
 
 pub part _BackCoverRail() {
@@ -100,11 +144,20 @@ pub part BackCover() {
     {_BackCoverTop();_BackCoverBack().translate(z=z_offset)}.union();
 }
 
+pub part LicheeCenterSupport() {
+    width=2mm;
+    height=3mm;
+    depth = INNER_DEPTH;
+    Rect(width, height).extrude(depth);
+}
+
 pub part _DisplayRailHousing() {
     width = INNER_WIDTH;
     height = DISPLAY_RAIL_HEIGHT;
     depth = DISPLAY_FULL_THICKNESS;
-    Rect(width, height).extrude(depth);
+
+    lsupp = LicheeCenterSupport().translate(y=-29.4mm, x=-1mm);
+    {Rect(width, height).extrude(depth); lsupp}.union();
 }
 
 pub part DisplayRail() {
@@ -115,26 +168,20 @@ pub part DisplayRail() {
 pub part HomeButton() {
     radius = 5.00mm;
     depth = WALL_THICKNESS / 2;
-    {Circle(radius + 2mm).extrude(depth);Circle(radius).extrude(depth);}.align(Z).union();
+    {Circle(radius + 0.6mm).extrude(depth);Circle(radius).extrude(depth);}.align(Z).union();
 }
-
-
-pub part UsbCPort() {
-    border_width = 0.6mm;
-    width = 8.4mm;
-    height = 2.6mm;
-    depth = 7.5mm;
-    // Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
-    y_offset = 0mm; // LICHEE_PCB_HEIGHT / 2 + 1mm;
-    z_offset = 0mm; // LICHEE_PCB_DEPTH;
-    RoundedRect(width, height, radius = border_width).extrude(depth).rotate(x=90°).align(Z).translate(x=0mm, y=y_offset, z=z_offset);
-}
-
 
 pub part _CaseFront() {
     width = OUTER_WIDTH;
     height = OUTER_HEIGHT;
-    Rect(width, height).extrude(WALL_THICKNESS);
+    plate = Rect(width, height).extrude(WALL_THICKNESS);
+    display_hole_height = DISPLAY_INSET + DISPLAY_HOLE_HEIGHT;
+    home_button_area_height = INNER_HEIGHT - display_hole_height;
+
+    y_offset = - INNER_HEIGHT / 2 + (home_button_area_height / 2);
+    home_button = HomeButton().reflect(Z).align(Z).translate(y=y_offset);
+
+    plate - home_button;
 }
 
 pub part _CaseWalls() {
@@ -149,175 +196,117 @@ pub part _CaseFrame() {
 }
 
 
-pub part _CaseFrameWithTopCoverRails() {
+pub part _CaseFrame_TopCoverRails() {
     y_offset = -RAIL_THICKNESS / 2;
     _CaseFrame() - BackCover().translate(y=y_offset);
 }
 
-pub part _CaseFrameWithRails() {
+pub part _CaseFrame_AllRails() {
     y_offset = INNER_HEIGHT / 2 - DISPLAY_RAIL_HEIGHT / 2;
     z_offset = WALL_THICKNESS;
-    {  _CaseFrameWithTopCoverRails(); DisplayRail().translate(y=y_offset,z=z_offset);}.union();
+    {  _CaseFrame_TopCoverRails(); DisplayRail().translate(y=y_offset,z=z_offset);}.union();
 }
 
-_CaseFrameWithRails();
-
-
-
-
-
-
-
-
-
-
-
-
-
-pub part BottomWallHole() {
-    width = INNER_WIDTH;
-    height = WALL_THICKNESS;
-    depth = OUTER_DEPTH - WALL_THICKNESS;
-    y_offset = CASE_HEIGHT / 2  - WALL_THICKNESS / 2;
-    z_offset = WALL_THICKNESS;
-    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=z_offset);
-}
-
-pub part DisplayHole() {
+pub part _DisplayWindow() {
     width = DISPLAY_HOLE_WIDTH;
     height = DISPLAY_HOLE_HEIGHT;
     depth = WALL_THICKNESS;
-    y_offset =  INNER_HEIGHT / 2 - DISPLAY_HOLE_HEIGHT / 2 - WALL_THICKNESS;
-    Rect(width, height).extrude(depth).translate(x=0mm, y=y_offset, z=0mm);
-}
-
-pub part LicheeCenterSupport() {
-    width=2mm;
-    height=10mm;
-    depth = INNER_DEPTH;
     Rect(width, height).extrude(depth);
 }
 
-pub part CaseWithDisplayHole() {
-    Case() - DisplayHole()
-}
-
-pub part CaseWithDisplayHoleAndRail() {
-    y_offset = OUTER_HEIGHT / 2 - DISPLAY_GLASS_HEIGHT / 2;
-    {CaseWithDisplayHole(); DisplayRail().translate(y=y_offset, z=WALL_THICKNESS)}.union();
-}
-
-pub part TopCoverHole() {
-    TopCover().translate(y=0mm, z=INNER_DEPTH+WALL_THICKNESS + 0mm);
+pub part _CaseFrame_AllRails_DisplayWindow() {
+    y_offset = INNER_HEIGHT / 2 - DISPLAY_HOLE_HEIGHT / 2 - DISPLAY_INSET;
+    _CaseFrame_AllRails() - _DisplayWindow().translate(y=y_offset);
 }
 
 
-pub part TopCoverUpsideDown() {
-    x_offset=OUTER_WIDTH + 20mm;
-    TopCover().translate(x=x_offset).reflect(Z).align(Z);
-}
-
-pub part LicheePcbShim() {
+pub part _LicheePcbShim() {
     width = LICHEE_PCB_WIDTH;
     height = LICHEE_PCB_HEIGHT;
     depth = LICHEE_PCB_DEPTH;
     Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
 }
 
-
-
-pub part LicheeMicroSdShim() {
-    // width = 11.10mm;
-    width = 14.00mm; // not centered, just make it bigger
-    height = 1.50mm;
-    depth = 16.00mm;
-    y_offset = LICHEE_PCB_HEIGHT / 2 + 1mm;
-    z_offset = -LICHEE_PCB_DEPTH - height / 2;
-    Rect(width, height).extrude(depth).rotate(x=90°).align(Z).translate(x=0mm, y=y_offset, z=z_offset);
+pub part _LicheeMicroSdShim() {
+    // sd slot is not centered, just make it bigger than 11.10mm;
+    width = MICRO_SD_WIDTH;
+    height = MICRO_SD_HEIGHT;
+    depth = MICRO_SD_DEPTH;
+    Rect(width, height).extrude(depth);
 }
+
+pub part UsbCPort() {
+    border_width = 0.6mm;
+    width = USB_C_WIDTH;
+    height = USB_C_HEIGHT;
+    depth = USB_C_DEPTH;
+    RoundedRect(width, height, radius = border_width).extrude(depth).rotate(x=90°);
+}
+
 
 pub part LicheeShim() {
-    UsbCPort();
-    LicheePcbShim();
-    LicheeMicroSdShim();
+    half_pcb_height = LICHEE_PCB_HEIGHT / 2;
+    inset = 1mm;
+    port_offset = half_pcb_height + inset + 0.25mm; // 0.25mm extra to keep the microSD hidden in the case
+    sd_offset = half_pcb_height - MICRO_SD_HEIGHT / 2 + inset;
+    z_offset = -LICHEE_PCB_DEPTH - height / 2;
+    {UsbCPort().translate(y=port_offset);_LicheePcbShim();_LicheeMicroSdShim().translate(y=sd_offset);}.align(Z).union();
 }
 
-pub part CaseWithDisplayAndTopCoverHoles() {
-    CaseWithDisplayHoleAndRail() - TopCoverHole();
+pub part LicheeShimPositioned() {
+    x_offset= LICHEE_PCB_WIDTH / 2 - WALL_THICKNESS / 2;
+    y_offset= -INNER_HEIGHT/2 + LICHEE_PCB_HEIGHT / 2 - WALL_THICKNESS / 2;
+    pcb_wiggling_room = 2.5mm;
+    z_offset =  -USB_C_HEIGHT + WALL_THICKNESS + DISPLAY_FULL_THICKNESS + pcb_wiggling_room;
+    LicheeShim().reflect(Y).translate(x=x_offset, y=y_offset, z=z_offset);
+}
+pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
+    _CaseFrame_AllRails_DisplayWindow() - LicheeShimPositioned() - ActionButtonRow();
 }
 
+pub part PushButton() {
+    width = PUSH_BUTTON_WIDTH;
+    height = PUSH_BUTTON_HEIGHT;
+    depth = PUSH_BUTTON_DEPTH;
 
+    button_radius = PUSH_BUTTON_RADIUS;
+    button_height = PUSH_BUTTON_BTN_DEPTH;
 
-
-
-pub part ActionButtonPositioned() {
-    x_offset=-INNER_WIDTH / 2;
-    z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
-
-    ActionButton().rotate(x=90°, y=-90°).translate(x=x_offset, z=z_offset);
-}
-
-pub part ActionButtonRow() {
-    top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
-
-    power_offset = top_offset - 5mm;
-    ActionButtonPositioned().translate(y=power_offset);
-
-    vol_up_offset = power_offset - 15mm;
-    ActionButtonPositioned().translate(y=vol_up_offset);
-
-    play_offset = vol_up_offset - 7mm;
-    ActionButtonPositioned().translate(y=play_offset);
-
-    vol_down_offset = play_offset - 7mm;
-    ActionButtonPositioned().translate(y=vol_down_offset);
+    footer = Rect(width, height).extrude(depth);
+    button = Circle(button_radius).extrude(button_height);
+    {footer;button;}.align(Z).union();
 }
 
 
 
 
-pub part CaseWithDisplay_TopCover_LicheeHoles() {
-    h = INNER_HEIGHT / 2 - LICHEE_PCB_HEIGHT;
 
-    x_offset = INNER_WIDTH / 2 - LICHEE_PCB_WIDTH / 2 + WALL_THICKNESS / 2;
-    y_offset = - (LICHEE_PCB_HEIGHT / 2) - h; //0mm; // -(INNER_HEIGHT - LICHEE_PCB_HEIGHT);
-    z_offset = WALL_THICKNESS + DISPLAY_FULL_THICKNESS + 2mm; // INNER_HEIGHT / 2;
-
-
-    CaseWithDisplayAndTopCoverHoles() - LicheeShim().rotate(x=180°).translate(x=x_offset,y=y_offset,z=z_offset);
+pub part PrintVersionCase() {
+    _CaseFrame_AllRails_DisplayWindow_LicheeHoles();
 }
 
-pub part CaseWithDisplay_TopCover_Lichee_HomeButtonHoles() {
+pub part PrintVersionBackCover() {
+    BackCover().reflect(Z).align(Z).translate(x=OUTER_WIDTH + 20mm);
+}
 
-    x_offset = 0mm; // INNER_WIDTH / 2 - LICHEE_PCB_WIDTH / 2 + WALL_THICKNESS / 2;
-    y_offset = -25mm; // - (LICHEE_PCB_HEIGHT / 2) - h; //0mm; // -(INNER_HEIGHT - LICHEE_PCB_HEIGHT);
-    z_offset = 0mm; // + DISPLAY_FULL_THICKNESS + 2mm; // INNER_HEIGHT / 2;
+pub part PrintVersionHomeButton() {
+    HomeButton().translate(x=-OUTER_WIDTH );
+}
 
-    CaseWithDisplay_TopCover_LicheeHoles() - HomeButton().reflect(Z).align(Z).translate(x=x_offset,y=y_offset,z=z_offset);
+pub part PrintVersionActionButton() {
+    ActionButton().translate(x=-OUTER_WIDTH - 10mm);
 }
 
 
-pub part CaseWithDisplay_TopCover_Lichee_HomeButton_ActionButtonHoles() {
 
-    CaseWithDisplay_TopCover_Lichee_HomeButtonHoles() - ActionButtonRow();
-}
+#[export = "player-case.stl"]
+PrintVersionCase();
 
+#[export = "player-backcover.stl"]
+PrintVersionBackCover();
 
-// y_offset=DISPLAY_INNER_HEIGHT/2;
-// {Case();DisplayRail().translate(y=-15.6mm, z=WALL_THICKNESS)}.union() - DisplayHole();
-// DisplayRailHousing() - Display();
-// DisplayRail();
-// DisplayRail().translate(y=15.6mm, z=WALL_THICKNESS);
+#[export = "player-home-button.stl"]
+PrintVersionHomeButton();
 
-// TopCover().rotate(180°);
-
-// LicheeShim();
-// HomeButton();
-// ActionButton();
-
-// #[export = "player-case.stl"]
-// CaseWithDisplay_TopCover_Lichee_HomeButton_ActionButtonHoles();
-
-// #[export = "player-backcover.stl"]
-// TopCoverUpsideDown();
-
+#[export = "player-action-button.stl"]
+PrintVersionActionButton();
