@@ -46,6 +46,9 @@ pub const USB_C_HEIGHT=2.6mm;
 pub const USB_C_DEPTH=7.5mm;
 
 
+
+
+
 pub const PUSH_BUTTON_WIDTH = 6.15mm; // 6.10mm real width
 pub const PUSH_BUTTON_HEIGHT = 3.95mm; // 3.91mm real height
 pub const PUSH_BUTTON_DEPTH = 1.65mm; // 1.60mm real depth
@@ -64,6 +67,9 @@ pub const PUSH_BUTTON_REMOVE_HOLE_NO = 0mm;
 
 pub const ACTION_BUTTON_DIAMETER = 3.5mm;
 pub const ACTION_BUTTON_BASE_DIAMETER = 4.7mm;
+pub const ACTION_BUTTON_BASE_DEPTH = WALL_THICKNESS / 2;
+pub const ACTION_BUTTON_BUTTON_DEPTH = WALL_THICKNESS;
+pub const ACTION_BUTTON_DEPTH = ACTION_BUTTON_BASE_DEPTH + ACTION_BUTTON_BUTTON_DEPTH;
 
 
 
@@ -238,19 +244,6 @@ pub part LicheeShimPositioned() {
     z_offset =  -USB_C_HEIGHT + WALL_THICKNESS + DISPLAY_FULL_THICKNESS + pcb_wiggling_room;
     LicheeShim().reflect(Y).translate(x=x_offset, y=y_offset, z=z_offset);
 }
-pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
-    _CaseFrame_AllRails_DisplayWindow() - LicheeShimPositioned() - ActionButtonRow();
-}
-
-
-
-pub part ActionButton() {
-    radius = ACTION_BUTTON_DIAMETER / 2;
-    depth = WALL_THICKNESS / 2;
-    holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(depth);
-    button = Circle(radius).extrude(depth+1.5mm);
-    {holder;button}.align(Z).union();
-}
 
 pub part PushButton() {
     width = PUSH_BUTTON_WIDTH;
@@ -265,14 +258,26 @@ pub part PushButton() {
     {footer;button;}.align(Z).union();
 }
 
+pub part ActionButton() {
+    radius = ACTION_BUTTON_DIAMETER / 2;
+    depth = WALL_THICKNESS / 2;
+
+    holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(ACTION_BUTTON_BASE_DEPTH);
+    button = Circle(radius).extrude(ACTION_BUTTON_BUTTON_DEPTH);
+    {holder;button}.align(Z).union();
+}
+
+pub part ActionButtonRotated() {
+    ActionButton().rotate(x=90°, y=-90°).align(Z);
+}
 
 pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
     extra_space = 0.5mm;
-
     extra_height = total_height - PUSH_BUTTON_HEIGHT - extra_space;
     if extra_height < 0mm {
         extra_height = 0mm;
     }
+
 
     width = PUSH_BUTTON_HOLDER_WIDTH;
     height = PUSH_BUTTON_HEIGHT + extra_space + extra_height;
@@ -292,26 +297,64 @@ pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
     holder - frame;
 }
 
-
-
-
-
-
-
-
-
-
-pub part ActionButtonPositioned() {
-    x_offset=-INNER_WIDTH / 2;
-    z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
-
-    ActionButton().rotate(x=90°, y=-90°).translate(x=x_offset, z=z_offset);
+pub part PushButtonHolderSpacer(total_height=15mm, z_offset_extra=0mm) {
+    {PushButtonHolder(total_height, z_offset_extra);ActionButton();}.align(Z).union();
 }
 
 
+pub part PushButtonHolderSpacerRotated(total_height=15mm, z_offset_extra=0mm) {
+    height = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+    x_offset = -INNER_WIDTH / 2 - ACTION_BUTTON_DEPTH; // todo: add action button height
+    z_offset = OUTER_DEPTH - height - WALL_THICKNESS;
+    PushButtonHolderSpacer(height, z_offset_extra)
+    .rotate(x=90°, y=-90°)
+    .align(Z).align(X).translate(x=x_offset, z=z_offset);
+}
+
+PushButtonHolderSpacerRotated();
+
+PrintVersionCase();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pub part PushButtonHolderRotated(total_height=15mm, z_offset_extra=0mm) {
+    height = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+    x_offset = -INNER_WIDTH / 2;
+    z_offset = OUTER_DEPTH - height;
+    PushButtonHolder(height, z_offset_extra)
+    .rotate(x=90°, y=-90°)
+    .align(Z).align(X).translate(x=x_offset, z=z_offset);
+}
+
+
+
+
+
+
+
+
+
 pub part ActionButtonRow() {
-
-
+    ActionButtonRotated();
+/*
     top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
 
     power_offset = top_offset - 10mm;
@@ -325,6 +368,7 @@ pub part ActionButtonRow() {
 
     vol_down_offset = play_offset - 12mm;
     ActionButtonPositioned().translate(y=vol_down_offset);
+    */
 }
 
 
@@ -349,9 +393,10 @@ pub part ActionButtonWithHolderSpacerRotatedAligned(remove_button_hole=PUSH_BUTT
     ActionButtonWithHolderSpacerRotated().align(Z).translate(z=z_offset);
 }
 
+/*
 x_offset=PUSH_BUTTON_DEPTH_KNOB + WALL_THICKNESS;
 ActionButtonWithHolderSpacerRotatedAligned().translate(x=x_offset);
-
+*/
 
 pub part PrintVersionCase() {
     _CaseFrame_AllRails_DisplayWindow_LicheeHoles();
@@ -370,13 +415,15 @@ pub part PrintVersionActionButton() {
 }
 
 
-
+pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
+    _CaseFrame_AllRails_DisplayWindow() - LicheeShimPositioned() - ActionButtonRow();
+}
 
 // ActionButtonWithHolderSpacer();
-
+/*
 #[export = "player-case.stl"]
 PrintVersionCase();
-/*
+
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
 
