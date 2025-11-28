@@ -326,6 +326,8 @@ pub part PushButtonHolder(total_height=0mm) {
     holder - frame;
 }
 
+
+
 pub part PushButtonHolderPositioned() {
     x_offset = -INNER_WIDTH / 2 + 2.9mm;
 
@@ -335,13 +337,27 @@ pub part PushButtonHolderPositioned() {
     PushButtonHolder(total_height=5.2mm).rotate(x=90°, y=-90°).translate(x=x_offset, y=y_offset,z=z_offset);
 }
 
+// PushButtonHolderPositioned();
+y_offset = - (10mm - 2.6mm); // power - btn_radius
+PushButtonHolderPositioned().translate(y=y_offset);
+
+y_offset = y_offset - 15mm;
+PushButtonHolderPositioned().translate(y=y_offset);
+
+y_offset = y_offset - 12mm;
+PushButtonHolderPositioned().translate(y=y_offset);
+
+y_offset = y_offset - 12mm;
+PushButtonHolderPositioned().translate(y=y_offset);
+
+/*
 // pb = PushButtonHolderPositioned();
 // pb.translate(y=10mm);
 
 y_offset = - (10 - 2.6)mm; // power - btn_radius
 PushButtonHolderPositioned().translate(y=y_offset);
 
-/*
+
     power_offset = top_offset - 10mm;
     ActionButtonPositioned().translate(y=power_offset);
 
