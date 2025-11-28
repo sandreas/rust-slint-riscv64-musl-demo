@@ -311,7 +311,6 @@ pub part PushButtonHolderSpacerRotated(total_height=15mm, z_offset_extra=0mm) {
     .align(Z).align(X).translate(x=x_offset, z=z_offset);
 }
 
-PushButtonHolderSpacerRotated();
 
 PrintVersionCase();
 
@@ -353,7 +352,20 @@ pub part PushButtonHolderRotated(total_height=15mm, z_offset_extra=0mm) {
 
 
 pub part ActionButtonRow() {
-    ActionButtonRotated();
+    zero_offset = INNER_HEIGHT / 2;
+
+    power_offset = zero_offset - 5mm;
+    vol_up_offset = zero_offset - 20mm;
+    play_offset =  vol_up_offset - 10mm;
+    vol_down_offset =  play_offset - 10mm;
+    {
+        PushButtonHolderSpacerRotated().translate(y=power_offset);
+        PushButtonHolderSpacerRotated().translate(y=vol_up_offset);
+        PushButtonHolderSpacerRotated().translate(y=play_offset);
+        PushButtonHolderSpacerRotated().translate(y=vol_down_offset);
+
+    }.union();
+
 /*
     top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
 
