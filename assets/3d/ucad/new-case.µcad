@@ -54,6 +54,17 @@ pub const PUSH_BUTTON_DEPTH_KNOB = 2.25mm; // 2.18 real depth
 pub const PUSH_BUTTON_RADIUS = 0.95mm; // 0.90mm real radius
 pub const PUSH_BUTTON_BTN_DEPTH = 0.85mm; // 0.80mm real depth
 
+pub const PUSH_BUTTON_HOLDER_WIDTH = 7.2mm;
+pub const PUSH_BUTTON_HOLDER_RAIL_WIDTH = 1mm;
+
+
+// this is a workaround
+pub const PUSH_BUTTON_REMOVE_HOLE_YES = 20mm;
+pub const PUSH_BUTTON_REMOVE_HOLE_NO = 0mm;
+
+pub const ACTION_BUTTON_DIAMETER = 3.5mm;
+pub const ACTION_BUTTON_BASE_DIAMETER = 4.7mm;
+
 
 
 
@@ -77,39 +88,6 @@ pub part Display() {
     {_DisplayGlass();_DisplayFrame();}.align(Z).union();
 }
 
-pub part ActionButton() {
-    radius = 2.0mm;
-    depth = WALL_THICKNESS / 2;
-
-    holder = Circle(radius + 0.6mm).extrude(depth);
-    button = Circle(radius).extrude(depth+1.5mm);
-
-    {holder;button}.align(Z).union();
-}
-
-pub part ActionButtonPositioned() {
-    x_offset=-INNER_WIDTH / 2;
-    z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
-
-    ActionButton().rotate(x=90°, y=-90°).translate(x=x_offset, z=z_offset);
-}
-
-
-pub part ActionButtonRow() {
-    top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
-
-    power_offset = top_offset - 10mm;
-    ActionButtonPositioned().translate(y=power_offset);
-
-    vol_up_offset = power_offset - 15mm;
-    ActionButtonPositioned().translate(y=vol_up_offset);
-
-    play_offset = vol_up_offset - 12mm;
-    ActionButtonPositioned().translate(y=play_offset);
-
-    vol_down_offset = play_offset - 12mm;
-    ActionButtonPositioned().translate(y=vol_down_offset);
-}
 
 pub part _BackCoverRail() {
     width = INNER_WIDTH + RAIL_THICKNESS * 2;
@@ -264,6 +242,16 @@ pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
     _CaseFrame_AllRails_DisplayWindow() - LicheeShimPositioned() - ActionButtonRow();
 }
 
+
+
+pub part ActionButton() {
+    radius = ACTION_BUTTON_DIAMETER / 2;
+    depth = WALL_THICKNESS / 2;
+    holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(depth);
+    button = Circle(radius).extrude(depth+1.5mm);
+    {holder;button}.align(Z).union();
+}
+
 pub part PushButton() {
     width = PUSH_BUTTON_WIDTH;
     height = PUSH_BUTTON_HEIGHT;
@@ -278,7 +266,91 @@ pub part PushButton() {
 }
 
 
+pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+    extra_space = 0.5mm;
 
+    extra_height = total_height - PUSH_BUTTON_HEIGHT - extra_space;
+    if extra_height < 0mm {
+        extra_height = 0mm;
+    }
+
+    width = PUSH_BUTTON_HOLDER_WIDTH;
+    height = PUSH_BUTTON_HEIGHT + extra_space + extra_height;
+    depth = PUSH_BUTTON_DEPTH_KNOB + extra_space;
+    z_offset = extra_space + z_offset_extra;
+
+    holder = Rect(width, height).extrude(depth) - PushButton().translate(z=z_offset);
+
+    x = PUSH_BUTTON_HOLDER_RAIL_WIDTH;
+
+    width = width + x;
+    height = height + extra_space * 2 + 2*x;
+    depth = depth - extra_space;
+    frame = Frame(width, height, extra_space + x)
+            .extrude(depth);
+
+    holder - frame;
+}
+
+
+
+
+
+
+
+
+
+
+pub part ActionButtonPositioned() {
+    x_offset=-INNER_WIDTH / 2;
+    z_offset=INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2 + 1mm;
+
+    ActionButton().rotate(x=90°, y=-90°).translate(x=x_offset, z=z_offset);
+}
+
+
+pub part ActionButtonRow() {
+
+
+    top_offset = INNER_HEIGHT / 2 - WALL_THICKNESS / 2;
+
+    power_offset = top_offset - 10mm;
+    ActionButtonPositioned().translate(y=power_offset);
+
+    vol_up_offset = power_offset - 15mm;
+    ActionButtonPositioned().translate(y=vol_up_offset);
+
+    play_offset = vol_up_offset - 12mm;
+    ActionButtonPositioned().translate(y=play_offset);
+
+    vol_down_offset = play_offset - 12mm;
+    ActionButtonPositioned().translate(y=vol_down_offset);
+}
+
+
+
+pub part ActionButtonWithHolderSpacer(remove_button_hole=PUSH_BUTTON_REMOVE_HOLE_NO) {
+    height = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+    {PushButtonHolder(total_height=height, PUSH_BUTTON_REMOVE_HOLE_YES);ActionButton();}
+        .align(Z)
+        .union();
+}
+
+pub part ActionButtonWithHolderSpacerRotated(remove_button_hole=PUSH_BUTTON_REMOVE_HOLE_NO) {
+    x_offset=-INNER_WIDTH / 2;
+    ActionButtonWithHolderSpacer(remove_button_hole)
+    .rotate(x=90°, y=-90°)
+    .translate(x=x_offset)
+    ;
+}
+
+pub part ActionButtonWithHolderSpacerRotatedAligned(remove_button_hole=PUSH_BUTTON_REMOVE_HOLE_NO) {
+    z_offset = OUTER_DEPTH - 3*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+    ActionButtonWithHolderSpacerRotated().align(Z).translate(z=z_offset);
+}
+
+x_offset=PUSH_BUTTON_DEPTH_KNOB + WALL_THICKNESS;
+ActionButtonWithHolderSpacerRotatedAligned().translate(x=x_offset);
 
 
 pub part PrintVersionCase() {
@@ -298,80 +370,9 @@ pub part PrintVersionActionButton() {
 }
 
 
-pub part PushButtonHolder(total_height=0mm) {
-
-    extra_space = 0.5mm;
-
-    extra_height = total_height - PUSH_BUTTON_HEIGHT - extra_space;
-    if extra_height < 0mm {
-        extra_height = 0mm;
-    }
-    // push-button-width: 6.15, ActionButton-radius: 5.2mm
-    width = 7.2mm; // action-button-radius + 2x1mm;
-    height = PUSH_BUTTON_HEIGHT + extra_space + extra_height;
-    depth = PUSH_BUTTON_DEPTH_KNOB + extra_space;
-    z_offset = extra_space;
-
-    holder = Rect(width, height).extrude(depth) - PushButton().translate(z=z_offset);
-
-    // x = overstand
-    x = 1mm;
-    width = width + x;
-    height = height + extra_space * 2 + 2*x;
-    depth = depth - extra_space;
-    frame = Frame(width, height, extra_space + x)
-            .extrude(depth);
-            // .translate(x=10mm);
-
-    holder - frame;
-}
 
 
-
-pub part PushButtonHolderPositioned() {
-    x_offset = -INNER_WIDTH / 2 + 2.9mm;
-
-    // display_inset = (56.37mm -  (48.02mm + 1.98mm)) / 2 = 3.185
-    y_offset = INNER_HEIGHT / 2 - 7.2mm / 2; // 39.61mm;
-    z_offset = 7.20mm; //INNER_DEPTH / 2 + DISPLAY_FULL_THICKNESS / 2;
-    PushButtonHolder(total_height=5.2mm).rotate(x=90°, y=-90°).translate(x=x_offset, y=y_offset,z=z_offset);
-}
-
-// PushButtonHolderPositioned();
-y_offset = - (10mm - 2.6mm); // power - btn_radius
-PushButtonHolderPositioned().translate(y=y_offset);
-
-y_offset = y_offset - 15mm;
-PushButtonHolderPositioned().translate(y=y_offset);
-
-y_offset = y_offset - 12mm;
-PushButtonHolderPositioned().translate(y=y_offset);
-
-y_offset = y_offset - 12mm;
-PushButtonHolderPositioned().translate(y=y_offset);
-
-/*
-// pb = PushButtonHolderPositioned();
-// pb.translate(y=10mm);
-
-y_offset = - (10 - 2.6)mm; // power - btn_radius
-PushButtonHolderPositioned().translate(y=y_offset);
-
-
-    power_offset = top_offset - 10mm;
-    ActionButtonPositioned().translate(y=power_offset);
-
-    vol_up_offset = power_offset - 15mm;
-    ActionButtonPositioned().translate(y=vol_up_offset);
-
-    play_offset = vol_up_offset - 12mm;
-    ActionButtonPositioned().translate(y=play_offset);
-
-    vol_down_offset = play_offset - 12mm;
-    ActionButtonPositioned().translate(y=vol_down_offset);
-*/
-
-
+// ActionButtonWithHolderSpacer();
 
 #[export = "player-case.stl"]
 PrintVersionCase();
