@@ -70,7 +70,7 @@ pub const ACTION_BUTTON_BASE_DIAMETER = 4.7mm;
 pub const ACTION_BUTTON_BASE_DEPTH = WALL_THICKNESS / 2;
 pub const ACTION_BUTTON_BUTTON_DEPTH = WALL_THICKNESS;
 pub const ACTION_BUTTON_DEPTH = ACTION_BUTTON_BASE_DEPTH + ACTION_BUTTON_BUTTON_DEPTH;
-
+pub const ACTION_BUTTON_RAIL_HEIGHT = OUTER_DEPTH - 2 * WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
 
 
 
@@ -320,7 +320,7 @@ pub part PushButtonHolderSpacer(total_height=15mm, z_offset_extra=0mm) {
 
 
 pub part PushButtonHolderSpacerRotated(z_offset_extra=20mm) {
-    height = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+    height = ACTION_BUTTON_RAIL_HEIGHT;
     x_offset = -INNER_WIDTH / 2 - ACTION_BUTTON_DEPTH; // todo: add action button height
     z_offset = OUTER_DEPTH - height - WALL_THICKNESS;
     PushButtonHolderSpacer(height, z_offset_extra)
@@ -361,14 +361,22 @@ pub part ActionButtonRowRails() {
     Rect(width, height).extrude(depth).align(X).align(Y).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
-// PushButton();
-// PushButtonHolder(total_height=6mm).translate(y=10mm);
-// PushButtonHolder2(total_height=6mm).translate(y=0mm);
 
-// PrintVersionCase();
-// PrintVersionBackCover();
-// ActionButtonRow(0mm); //.translate(z=3mm);
-// PushButtonHolderSpacer();
+
+
+_CaseFrame_AllRails_DisplayWindow_LicheeHoles();
+PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT+5mm)
+.reflect(Z)
+.align(Z)
+.rotate(z=90°)
+.translate(y=-26.5mm, z=WALL_THICKNESS);
+
+
+
+
+
+
+
 
 
 pub part PrintVersionCase() {
@@ -391,6 +399,14 @@ pub part PrintVersionActionButton() {
         .translate(x=-OUTER_WIDTH, y=-10mm);
 }
 
+pub part PrintVersionPushButtonHolder() {
+    rotation=90°; //66°;
+    PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT)
+    .rotate(y=rotation)
+    .align(Z)
+    .translate(x=-OUTER_WIDTH, y=OUTER_HEIGHT/2);
+}
+
 
 
 pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
@@ -398,7 +414,7 @@ pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
 }
 
 // ActionButtonWithHolderSpacer();
-
+/*
 #[export = "player-case.stl"]
 PrintVersionCase();
 
@@ -410,3 +426,7 @@ PrintVersionHomeButton();
 
 #[export = "player-action-button.stl"]
 PrintVersionActionButton();
+
+#[export = "player-action-button-holder.stl"]
+PrintVersionPushButtonHolder();
+*/
