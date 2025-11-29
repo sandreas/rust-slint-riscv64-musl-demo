@@ -52,7 +52,7 @@ pub const USB_C_DEPTH=7.5mm;
 pub const PUSH_BUTTON_WIDTH = 6.15mm; // 6.10mm real width
 pub const PUSH_BUTTON_HEIGHT = 3.95mm; // 3.91mm real height
 pub const PUSH_BUTTON_DEPTH = 1.65mm; // 1.60mm real depth
-pub const PUSH_BUTTON_DEPTH_KNOB = 2.25mm; // 2.18 real depth
+pub const PUSH_BUTTON_DEPTH_KNOB = 2.25mm; // 2.18 real depth with knob pressed down, 2.40 with released knob
 
 pub const PUSH_BUTTON_RADIUS = 0.95mm; // 0.90mm real radius
 pub const PUSH_BUTTON_BTN_DEPTH = 0.85mm; // 0.80mm real depth
@@ -257,13 +257,15 @@ pub part PushButton(button_height=PUSH_BUTTON_BTN_DEPTH) {
     {footer;button;}.align(Z).union();
 }
 
-pub part ActionButton() {
+pub part ActionButton(pin_depth=0mm) {
     radius = ACTION_BUTTON_DIAMETER / 2;
     depth = WALL_THICKNESS / 2;
 
     holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(ACTION_BUTTON_BASE_DEPTH);
     button = Circle(radius).extrude(ACTION_BUTTON_BUTTON_DEPTH);
-    {holder;button}.align(Z).union();
+
+    push_button_pin = Circle(PUSH_BUTTON_RADIUS - 0.25mm).extrude(pin_depth);
+    {push_button_pin;holder;button}.align(Z).union();
 }
 
 pub part ActionButtonRotated() {
@@ -363,11 +365,10 @@ pub part ActionButtonRowRails() {
 // PushButtonHolder(total_height=6mm).translate(y=10mm);
 // PushButtonHolder2(total_height=6mm).translate(y=0mm);
 
-PrintVersionCase();
+// PrintVersionCase();
 // PrintVersionBackCover();
-ActionButtonRow(0mm); //.translate(z=3mm);
+// ActionButtonRow(0mm); //.translate(z=3mm);
 // PushButtonHolderSpacer();
-
 
 
 pub part PrintVersionCase() {
@@ -383,7 +384,11 @@ pub part PrintVersionHomeButton() {
 }
 
 pub part PrintVersionActionButton() {
-    ActionButton().translate(x=-OUTER_WIDTH - 5mm);
+    z_offset=ACTION_BUTTON_DEPTH + PUSH_BUTTON_BTN_DEPTH;
+    ActionButton(pin_depth=PUSH_BUTTON_BTN_DEPTH)
+        .reflect(Z)
+        .align(Z)
+        .translate(x=-OUTER_WIDTH, y=-10mm);
 }
 
 
@@ -393,7 +398,7 @@ pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
 }
 
 // ActionButtonWithHolderSpacer();
-/*
+
 #[export = "player-case.stl"]
 PrintVersionCase();
 
@@ -405,4 +410,3 @@ PrintVersionHomeButton();
 
 #[export = "player-action-button.stl"]
 PrintVersionActionButton();
-*/
