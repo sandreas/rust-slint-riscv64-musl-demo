@@ -313,7 +313,7 @@ pub part PushButtonHolderSpacerRotated(z_offset_extra=20mm) {
 
 
 
-pub part ActionButtonRow() {
+pub part ActionButtonRow(z_offset_extra=20mm) {
     zero_offset = INNER_HEIGHT / 2;
 
     power_offset = zero_offset - 5mm;
@@ -321,10 +321,10 @@ pub part ActionButtonRow() {
     play_offset =  vol_up_offset - 10mm;
     vol_down_offset =  play_offset - 10mm;
     {
-        PushButtonHolderSpacerRotated().translate(y=power_offset);
-        PushButtonHolderSpacerRotated().translate(y=vol_up_offset);
-        PushButtonHolderSpacerRotated().translate(y=play_offset);
-        PushButtonHolderSpacerRotated().translate(y=vol_down_offset);
+        PushButtonHolderSpacerRotated(z_offset_extra).translate(y=power_offset);
+        PushButtonHolderSpacerRotated(z_offset_extra).translate(y=vol_up_offset);
+        PushButtonHolderSpacerRotated(z_offset_extra).translate(y=play_offset);
+        PushButtonHolderSpacerRotated(z_offset_extra).translate(y=vol_down_offset);
 
     }.union();
 }
@@ -334,7 +334,7 @@ pub part ActionButtonRow() {
 
 
 pub part ActionButtonRowRails() {
-    width = 3mm;
+    width = 1mm;
     height = DISPLAY_GLASS_HEIGHT; // INNER_HEIGHT / 2;
     depth = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
 
@@ -346,7 +346,8 @@ pub part ActionButtonRowRails() {
 
 
 PrintVersionCase();
-// ActionButtonRow();
+PrintVersionBackCover();
+// ActionButtonRow(0mm); //.translate(z=3mm);
 
 
 
@@ -367,6 +368,7 @@ pub part PrintVersionHomeButton() {
 pub part PrintVersionActionButton() {
     ActionButton().translate(x=-OUTER_WIDTH - 5mm);
 }
+
 
 
 pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
