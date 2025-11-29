@@ -245,13 +245,12 @@ pub part LicheeShimPositioned() {
     LicheeShim().reflect(Y).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
-pub part PushButton() {
+pub part PushButton(button_height=PUSH_BUTTON_BTN_DEPTH) {
     width = PUSH_BUTTON_WIDTH;
     height = PUSH_BUTTON_HEIGHT;
     depth = PUSH_BUTTON_DEPTH;
 
     button_radius = PUSH_BUTTON_RADIUS;
-    button_height = PUSH_BUTTON_BTN_DEPTH;
 
     footer = Rect(width, height).extrude(depth);
     button = Circle(button_radius).extrude(button_height);
@@ -271,7 +270,7 @@ pub part ActionButtonRotated() {
     ActionButton().rotate(x=90°, y=-90°).align(Z);
 }
 
-pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+pub part PushButtonHolder_old(total_height=15mm, z_offset_extra=0mm) {
     extra_space = 0.5mm;
     extra_height = total_height - PUSH_BUTTON_HEIGHT - extra_space;
     if extra_height < 0mm {
@@ -295,6 +294,22 @@ pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
             .extrude(depth);
 
     holder - frame;
+}
+
+pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+    width = PUSH_BUTTON_WIDTH + 1mm + 1mm;
+    height = total_height;
+    depth = 0.5mm;
+    rail = Rect(width, height).extrude(depth);
+
+    pb_wall_thickness = 1mm;
+    width = PUSH_BUTTON_WIDTH - 0.3mm;
+    height = total_height; // PUSH_BUTTON_HEIGHT + pb_wall_thickness;
+    depth = PUSH_BUTTON_DEPTH + pb_wall_thickness;
+    z_offset = pb_wall_thickness / 2 + z_offset_extra;
+    holder = Rect(width, height).extrude(depth);
+
+    {rail;holder}.align(Z).union().reflect(Z).align(Z) - PushButton(button_height=10mm).translate(z=z_offset);
 }
 
 pub part PushButtonHolderSpacer(total_height=15mm, z_offset_extra=0mm) {
@@ -344,12 +359,14 @@ pub part ActionButtonRowRails() {
     Rect(width, height).extrude(depth).align(X).align(Y).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
+// PushButton();
+// PushButtonHolder(total_height=6mm).translate(y=10mm);
+// PushButtonHolder2(total_height=6mm).translate(y=0mm);
 
 PrintVersionCase();
-PrintVersionBackCover();
-// ActionButtonRow(0mm); //.translate(z=3mm);
-
-
+// PrintVersionBackCover();
+ActionButtonRow(0mm); //.translate(z=3mm);
+// PushButtonHolderSpacer();
 
 
 
