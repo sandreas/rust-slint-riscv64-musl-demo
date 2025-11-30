@@ -14,7 +14,7 @@ Here is how it looks at the moment:
 
 And here is a draft for the case:
 
-![3d-case-draft2.jpg](assets/img/3d-case-draft.jpg)
+![3d-case-draft.jpg](assets/img/3d-case-draft2.jpg)
 
 Planned dimensions are:
 - 45.00mm x 88.75mm 11.60mm (w x h x d)
