@@ -61,6 +61,7 @@ pub const PUSH_BUTTON_HOLDER_WIDTH = 7.2mm;
 pub const PUSH_BUTTON_HOLDER_RAIL_WIDTH = 1mm;
 
 
+
 // this is a workaround
 pub const PUSH_BUTTON_REMOVE_HOLE_YES = 20mm;
 pub const PUSH_BUTTON_REMOVE_HOLE_NO = 0mm;
@@ -71,6 +72,7 @@ pub const ACTION_BUTTON_BASE_DEPTH = WALL_THICKNESS / 2;
 pub const ACTION_BUTTON_BUTTON_DEPTH = WALL_THICKNESS;
 pub const ACTION_BUTTON_DEPTH = ACTION_BUTTON_BASE_DEPTH + ACTION_BUTTON_BUTTON_DEPTH;
 pub const ACTION_BUTTON_RAIL_HEIGHT = OUTER_DEPTH - 2 * WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
+pub const ACTION_BUTTON_PIN_DEPTH = 0.3mm;
 
 
 
@@ -150,7 +152,7 @@ pub part DisplayRail() {
 }
 
 pub part HomeButton() {
-    radius = 5.00mm;
+    radius = 4.00mm;
     depth = WALL_THICKNESS / 2;
     {Circle(radius + 0.6mm).extrude(depth);Circle(radius).extrude(depth);}.align(Z).union();
 }
@@ -165,7 +167,7 @@ pub part _CaseFront() {
     y_offset = - INNER_HEIGHT / 2 + (home_button_area_height / 2);
     home_button = HomeButton().reflect(Z).align(Z).translate(y=y_offset);
 
-    plate - home_button;
+    plate; //  - home_button;
 }
 
 pub part _CaseWalls() {
@@ -257,14 +259,14 @@ pub part PushButton(button_height=PUSH_BUTTON_BTN_DEPTH) {
     {footer;button;}.align(Z).union();
 }
 
-pub part ActionButton(pin_depth=0mm) {
+pub part ActionButton(pin_depth=0mm, pin_radius=PUSH_BUTTON_RADIUS - 0.25mm) {
     radius = ACTION_BUTTON_DIAMETER / 2;
     depth = WALL_THICKNESS / 2;
 
     holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(ACTION_BUTTON_BASE_DEPTH);
     button = Circle(radius).extrude(ACTION_BUTTON_BUTTON_DEPTH);
 
-    push_button_pin = Circle(PUSH_BUTTON_RADIUS - 0.25mm).extrude(pin_depth);
+    push_button_pin = Circle(pin_radius).extrude(pin_depth);
     {push_button_pin;holder;button}.align(Z).union();
 }
 
@@ -315,7 +317,9 @@ pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
 }
 
 pub part PushButtonHolderSpacer(total_height=15mm, z_offset_extra=0mm) {
-    {PushButtonHolder(total_height, z_offset_extra);ActionButton();}.align(Z).union();
+    pin_depth=ACTION_BUTTON_PIN_DEPTH; // PUSH_BUTTON_BTN_DEPTH;
+    pin_radius=ACTION_BUTTON_BASE_DIAMETER/2; // +0.1mm;
+    {PushButtonHolder(total_height, z_offset_extra);ActionButton(pin_depth=pin_depth, pin_radius=pin_radius);}.align(Z).union();
 }
 
 
@@ -351,7 +355,7 @@ pub part ActionButtonRow(z_offset_extra=20mm) {
 
 
 pub part ActionButtonRowRails() {
-    width = 1mm;
+    width = 1mm + ACTION_BUTTON_PIN_DEPTH;
     height = DISPLAY_GLASS_HEIGHT; // INNER_HEIGHT / 2;
     depth = OUTER_DEPTH - 2*WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
 
@@ -363,14 +367,20 @@ pub part ActionButtonRowRails() {
 
 
 
+// ActionButton(pin_depth=ACTION_BUTTON_PIN_DEPTH, ACTION_BUTTON_BASE_DIAMETER/2+0.1mm);
 
-_CaseFrame_AllRails_DisplayWindow_LicheeHoles();
-PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT+5mm)
+// _CaseFrame_AllRails_DisplayWindow_LicheeHoles();
+
+// PrintVersionActionButton();
+
+/*
+holder_height=PUSH_BUTTON_HEIGHT + 0.5mm; // ACTION_BUTTON_RAIL_HEIGHT+3.5mm
+PushButtonHolder(total_height=holder_height)
 .reflect(Z)
 .align(Z)
-.rotate(z=90°)
+// .rotate(z=90°)
 .translate(y=-26.5mm, z=WALL_THICKNESS);
-
+*/
 
 
 
@@ -393,7 +403,7 @@ pub part PrintVersionHomeButton() {
 
 pub part PrintVersionActionButton() {
     z_offset=ACTION_BUTTON_DEPTH + PUSH_BUTTON_BTN_DEPTH;
-    ActionButton(pin_depth=PUSH_BUTTON_BTN_DEPTH)
+    ActionButton(pin_depth=ACTION_BUTTON_PIN_DEPTH)
         .reflect(Z)
         .align(Z)
         .translate(x=-OUTER_WIDTH, y=-10mm);
