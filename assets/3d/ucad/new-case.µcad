@@ -350,10 +350,6 @@ pub part ActionButtonRow(z_offset_extra=20mm) {
     }.union();
 }
 
-
-
-
-
 pub part ActionButtonRowRails() {
     width = 1mm + ACTION_BUTTON_PIN_DEPTH;
     height = DISPLAY_GLASS_HEIGHT; // INNER_HEIGHT / 2;
@@ -364,30 +360,6 @@ pub part ActionButtonRowRails() {
     z_offset = WALL_THICKNESS + DISPLAY_FULL_THICKNESS;
     Rect(width, height).extrude(depth).align(X).align(Y).translate(x=x_offset, y=y_offset, z=z_offset);
 }
-
-
-
-// ActionButton(pin_depth=ACTION_BUTTON_PIN_DEPTH, ACTION_BUTTON_BASE_DIAMETER/2+0.1mm);
-
-// _CaseFrame_AllRails_DisplayWindow_LicheeHoles();
-
-// PrintVersionActionButton();
-
-/*
-holder_height=PUSH_BUTTON_HEIGHT + 0.5mm; // ACTION_BUTTON_RAIL_HEIGHT+3.5mm
-PushButtonHolder(total_height=holder_height)
-.reflect(Z)
-.align(Z)
-// .rotate(z=90°)
-.translate(y=-26.5mm, z=WALL_THICKNESS);
-*/
-
-
-
-
-
-
-
 
 pub part PrintVersionCase() {
     _CaseFrame_AllRails_DisplayWindow_LicheeHoles();
@@ -406,7 +378,7 @@ pub part PrintVersionActionButton() {
     ActionButton(pin_depth=ACTION_BUTTON_PIN_DEPTH)
         .reflect(Z)
         .align(Z)
-        .translate(x=-OUTER_WIDTH, y=-10mm);
+        .translate(x=-OUTER_WIDTH, y=-8mm);
 }
 
 pub part PrintVersionPushButtonHolder() {
@@ -414,29 +386,25 @@ pub part PrintVersionPushButtonHolder() {
     PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT)
     .rotate(y=rotation)
     .align(Z)
-    .translate(x=-OUTER_WIDTH, y=OUTER_HEIGHT/2);
+    .translate(x=-OUTER_WIDTH, y=8mm);
 }
-
 
 
 pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
     {_CaseFrame_AllRails_DisplayWindow();ActionButtonRowRails();}.union() - LicheeShimPositioned() - ActionButtonRow();
 }
 
-// ActionButtonWithHolderSpacer();
-/*
+
 #[export = "player-case.stl"]
 PrintVersionCase();
 
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
 
-#[export = "player-home-button.stl"]
-PrintVersionHomeButton();
 
 #[export = "player-action-button.stl"]
 PrintVersionActionButton();
 
 #[export = "player-action-button-holder.stl"]
 PrintVersionPushButtonHolder();
-*/
+
