@@ -101,7 +101,7 @@ pub part _BackCoverRail() {
     width = INNER_WIDTH + RAIL_THICKNESS * 2;
     height = INNER_HEIGHT + RAIL_THICKNESS;
     depth = RAIL_THICKNESS;
-    y_offset=RAIL_THICKNESS/2;
+    // y_offset=RAIL_THICKNESS/2;
     Rect(width, height).extrude(depth);
 }
 
@@ -161,11 +161,11 @@ pub part _CaseFront() {
     width = OUTER_WIDTH;
     height = OUTER_HEIGHT;
     plate = Rect(width, height).extrude(WALL_THICKNESS);
-    display_hole_height = DISPLAY_INSET + DISPLAY_HOLE_HEIGHT;
-    home_button_area_height = INNER_HEIGHT - display_hole_height;
 
-    y_offset = - INNER_HEIGHT / 2 + (home_button_area_height / 2);
-    home_button = HomeButton().reflect(Z).align(Z).translate(y=y_offset);
+    // display_hole_height = DISPLAY_INSET + DISPLAY_HOLE_HEIGHT;
+    // home_button_area_height = INNER_HEIGHT - display_hole_height;
+    // y_offset = - INNER_HEIGHT / 2 + (home_button_area_height / 2);
+    // home_button = HomeButton().reflect(Z).align(Z).translate(y=y_offset);
 
     plate; //  - home_button;
 }
@@ -235,7 +235,7 @@ pub part LicheeShim() {
     inset = 1mm;
     port_offset = half_pcb_height + inset + 0.25mm; // 0.25mm extra to keep the microSD hidden in the case
     sd_offset = half_pcb_height - MICRO_SD_HEIGHT / 2 + inset;
-    z_offset = -LICHEE_PCB_DEPTH - height / 2;
+    // z_offset = -LICHEE_PCB_DEPTH - height / 2;
     {UsbCPort().translate(y=port_offset);_LicheePcbShim();_LicheeMicroSdShim().translate(y=sd_offset);}.align(Z).union();
 }
 
@@ -261,7 +261,7 @@ pub part PushButton(button_height=PUSH_BUTTON_BTN_DEPTH) {
 
 pub part ActionButton(pin_depth=0mm, pin_radius=PUSH_BUTTON_RADIUS - 0.25mm) {
     radius = ACTION_BUTTON_DIAMETER / 2;
-    depth = WALL_THICKNESS / 2;
+    // depth = WALL_THICKNESS / 2;
 
     holder = Circle(ACTION_BUTTON_BASE_DIAMETER / 2).extrude(ACTION_BUTTON_BASE_DEPTH);
     button = Circle(radius).extrude(ACTION_BUTTON_BUTTON_DEPTH);
@@ -300,11 +300,16 @@ pub part PushButtonHolder_old(total_height=15mm, z_offset_extra=0mm) {
     holder - frame;
 }
 
-pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+pub part _PushButtonHolderRail(total_height=15mm) {
+
     width = PUSH_BUTTON_WIDTH + 1mm + 1mm;
     height = total_height;
     depth = 0.5mm;
-    rail = Rect(width, height).extrude(depth);
+    Rect(width, height).extrude(depth);
+}
+
+pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+    rail = _PushButtonHolderRail(total_height=total_height);
 
     pb_wall_thickness = 1mm;
     width = PUSH_BUTTON_WIDTH - 0.3mm;
@@ -374,7 +379,7 @@ pub part PrintVersionHomeButton() {
 }
 
 pub part PrintVersionActionButton() {
-    z_offset=ACTION_BUTTON_DEPTH + PUSH_BUTTON_BTN_DEPTH;
+    // z_offset=ACTION_BUTTON_DEPTH + PUSH_BUTTON_BTN_DEPTH;
     ActionButton(pin_depth=ACTION_BUTTON_PIN_DEPTH)
         .reflect(Z)
         .align(Z)
