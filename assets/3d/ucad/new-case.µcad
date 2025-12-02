@@ -307,8 +307,7 @@ pub part _PushButtonHolderRail(total_height=15mm) {
     depth = 0.5mm;
     Rect(width, height).extrude(depth);
 }
-
-pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
+pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm,cable_rail_height=0mm) {
     rail = _PushButtonHolderRail(total_height=total_height);
 
     pb_wall_thickness = 1mm;
@@ -316,8 +315,7 @@ pub part PushButtonHolder(total_height=15mm, z_offset_extra=0mm) {
     height = total_height; // PUSH_BUTTON_HEIGHT + pb_wall_thickness;
     depth = PUSH_BUTTON_DEPTH + pb_wall_thickness;
     z_offset = pb_wall_thickness / 2 + z_offset_extra;
-    holder = Rect(width, height).extrude(depth);
-
+    holder = Rect(width, height).extrude(depth) - PushButtonHolderCableRail(push_button_total_height=total_height, rail_height=cable_rail_height);
     {rail;holder}.align(Z).union().reflect(Z).align(Z) - PushButton(button_height=10mm).translate(z=z_offset);
 }
 
@@ -388,7 +386,7 @@ pub part PrintVersionActionButton() {
 
 pub part PrintVersionPushButtonHolder() {
     rotation=90°; //66°;
-    PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT)
+    PushButtonHolder(total_height=ACTION_BUTTON_RAIL_HEIGHT,z_offset_extra=0mm, cable_rail_height=0.5mm)
     .rotate(y=rotation)
     .align(Z)
     .translate(x=-OUTER_WIDTH, y=8mm);
@@ -398,6 +396,18 @@ pub part PrintVersionPushButtonHolder() {
 pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
     {_CaseFrame_AllRails_DisplayWindow();ActionButtonRowRails();}.union() - LicheeShimPositioned() - ActionButtonRow();
 }
+
+pub part PushButtonHolderCableRail(push_button_total_height=15mm, rail_height=1mm) {
+    total_height=push_button_total_height;
+    width = PUSH_BUTTON_WIDTH;
+    height = rail_height;
+    depth = PUSH_BUTTON_DEPTH+0.5mm;
+    y_offset=total_height / 2 - height/2;
+    z_offset=0mm;
+    Rect(width, height).extrude(depth).translate(y=y_offset,z=z_offset);
+}
+
+
 
 
 #[export = "player-case.stl"]
