@@ -14,6 +14,8 @@ struct Args {
     base_directory: String,
 }
 
+use crate::media_source::MediaType::Audiobook;
+use crate::media_source::{FileMediaSource, MediaSource, MediaSourceItem, MediaSourceQuery, MediaType};
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use slint::{
     ComponentHandle,
@@ -25,9 +27,9 @@ use slint::{
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
+use MediaType::Music;
 
 slint::include_modules!();
-
 
 
 #[tokio::main]
@@ -35,6 +37,26 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let args = Args::parse();
     println!("base directory is: {}", args.base_directory);
+    let base_path = Path::new(&args.base_directory);
+    if !Path::exists(base_path) {
+        match std::env::current_dir() {
+            Ok(cwd) => {
+                println!("base directory does not exist: {:?}, current dir is: {:?}", base_path, cwd);
+            }
+            Err(_) => {
+                println!("base directory does not exist: {}", args.base_directory);
+            }
+        }
+
+        return Err(slint::PlatformError::Other(format!("Base directory does not exist: {}", args.base_directory)));
+    }
+
+    /*
+    for entry in WalkDir::new(base_path) {
+        println!("{}", entry.unwrap().path().display());
+    }
+    */
+
 
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
@@ -51,18 +73,39 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+
+
+
     // Example: send command to update the string
     // cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
 
+    let mut file_media_source = FileMediaSource::new(base_path.to_str().unwrap().to_string());
+
+
     // Wrap in a VecModel, then ModelRc
-    let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
-    let model = Rc::new(VecModel::from(files));
+    // let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
+    // let model = Rc::new(VecModel::from(files));
+    // let model_rc = ModelRc::from(model);
+
+
+    // todo: this should happen in a background thread
+    file_media_source.init().await;
+
+    let query = MediaSourceQuery::new(Music);
+    let audiobooks = file_media_source.query(query).await;
+    let len = audiobooks.iter().len();
+
+
+    let vec_model_slint_items = rust_items_to_slint_model(audiobooks);
+    let slint_items = ModelRc::<SlintMediaSourceItem>::from(vec_model_slint_items);
+
+/*    let model = Rc::new(VecModel::from(audiobooks));
     let model_rc = ModelRc::from(model);
 
-
+ */
 
     let slint_app_window = MainWindow::new()?;
-    slint_app_window.set_files(model_rc);
+    slint_app_window.set_items(slint_items);
 
     // let slint_app_window_weak = slint_app_window.as_weak();
 
@@ -169,4 +212,27 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     slint_app_window.run()
 }
+fn rust_items_to_slint_model(rust_items: Vec<&MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
+    // Create VecModel directly
+    let model = VecModel::<SlintMediaSourceItem>::from(
+        rust_items
+            .into_iter()
+            .map(|rust_item| SlintMediaSourceItem {
+                id: rust_item.id.clone().into(),
+                media_type: convert_media_type(&rust_item.media_type),
+                name: rust_item.name.clone().into(),
+            })
+            .collect::<Vec<_>>(),
+    );
 
+    // Explicitly wrap in ModelRc if needed (usually not)
+    ModelRc::from(Rc::new(model))
+}
+
+fn convert_media_type(media_type: &MediaType) -> i32 {
+    match media_type {
+        MediaType::Unspecified => 0,
+        Audiobook => 2,
+        Music => 4,
+    }
+}

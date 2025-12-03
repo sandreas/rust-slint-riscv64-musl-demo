@@ -98,7 +98,7 @@ impl Player {
     }
 
     async fn play_media(sink:&Sink, id: String) {
-        let mut path = Path::new(&id);
+        let path = Path::new(&id);
         if !path.exists() {
             return
         }

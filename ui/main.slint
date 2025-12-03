@@ -20,8 +20,25 @@ import { Music } from "main/music.slint";
 import { Search } from "main/search.slint";
 import { Settings } from "main/settings.slint";
 
+
+export enum SlintMediaType {
+    Unspecified,
+    Audiobook,
+    Music
+    // Normal, Audiobook, Bookmark, Music Video, Movie, TV Show, Booklet, Ringtone, Podcast, iTunes U
+}
+
+export struct SlintMediaSourceItem {
+    id: string,
+    media_type: int,
+    name: string,
+}
+
+
+
+
 export component MainWindow inherits Window {
-    in property <[string]> files; // Accepts a model of strings
+    in property <[SlintMediaSourceItem]> items; // Accepts a model of strings
 
     default-font-family: "Lato";
     default-font-size: 16pt;
@@ -54,8 +71,8 @@ export component MainWindow inherits Window {
         padding: 0;
         ScrollView {
             ListView {
-                for file_name in files : Text {
-                    text: file_name;
+                for item in items : Text {
+                    text: item.media_type + ": " + item.name;
                 }
             }
 
