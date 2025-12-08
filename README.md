@@ -114,6 +114,15 @@ That's it for now, more to come.
 - [x] Find suitable Hardware (Board, Display, Audio)
 - [x] Compile and run basic test application in Rust / Slint
 - [ ] 3D Design a case for housing the components and a battery >= 1500mah
+  - [x] Create the basic case design
+  - [ ] Add Shims for TP4057 5V and MAX17043
+  - [ ] Position TP4057 USB-C creating a bottom hole 
+  - [ ] Position MAX17043 JST 2.0 facing upwards for connecting the 1600mah battery
+- [ ] Compose the hardware components
+  - [x] Make a breadboard draft
+  - [ ] Test the button GPIO connections
+  - [ ] Test MAX17043 I2C connection and readout
+  - [ ] Test Headphone-remote controls
 - [ ] Implement the DAP software for the embedded device
 - [ ] Implement the Sync software for the Desktop / Mobile devices
 
