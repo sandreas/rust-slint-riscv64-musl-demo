@@ -4,9 +4,10 @@ use std::io::Write;
 use tokio::sync::mpsc;
 
 mod player;
-mod media_source;
 mod headset;
 mod gpio_button_service;
+mod file_media_source;
+mod media_source_trait;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -16,8 +17,6 @@ struct Args {
     base_directory: String,
 }
 
-use crate::media_source::MediaType::Audiobook;
-use crate::media_source::{FileMediaSource, MediaSource, MediaSourceItem, MediaSourceFilter, MediaType, MediaSourceEvent, MediaSourceCommand};
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use slint::{
     ComponentHandle,
@@ -30,9 +29,9 @@ use std::iter;
 use std::path::Path;
 use std::rc::Rc;
 use evdev::Device;
-use walkdir::WalkDir;
-use MediaType::Music;
+use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
+use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 
 slint::include_modules!();
 
@@ -66,64 +65,12 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
 
 
-        let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
-        let (source_evt_tx, mut source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
-
-        tokio::spawn(async move {
-            let base_path = args.base_directory.as_str();
-            let audio_extensions = vec!("mp3", "m4b");
-
-            // let music_dir = PathBuf::from(&self.base_path).join("music");
-            // let audiobook_dir = PathBuf::from(&self.base_path).join("audiobooks");
-
-            let audio_files = WalkDir::new(&base_path)
-                .into_iter()
-                .filter_map(|e| e.ok())
-                .filter(|e| {
-                    let e_clone = e.clone();
-                    let metadata = e_clone.metadata().unwrap();
-                    if !metadata.is_file() {
-                        return false;
-                    }
-                    let path = e_clone.into_path();
-                    match path.extension() {
-                        Some(ext) => {
-                            return audio_extensions.contains(&ext.to_str().unwrap());
-                        }
-                        None => return false,
-                    }
-
-                })
-                .map(|e| {
-                    let path = e.path();
-                    let path_string = path.to_str().unwrap().to_string();
-                    let start_index = base_path.len();
-                    let rel_path = &path_string[start_index..];
-                    let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
-                    let media_type = if rel_path.starts_with("/music/") {
-                        MediaType::Music
-                    }
-                    else if file_name.starts_with("/audiobooks/") {
-                        MediaType::Audiobook
-                    } else {
-                        MediaType::Unspecified
-                    };
-
-                    let name = e.file_name().to_string_lossy().to_string();
-                    let item = MediaSourceItem {
-                        id: name.clone(),
-                        media_type,
-                        name,
-                    };
-                    // (item.id.clone(), item) // (key, value) for HashMap
-                    item
-                }).collect::<Vec<MediaSourceItem>>();
-
-            /*
-            let mut source = FileMediaSource::new(audio_files);
-            source.run(source_cmd_rx, source_evt_tx).await;
-             */
-        });
+    // let file_source: Box<dyn MediaSource> = Box::new(FileMediaSource::from_path(args.base_directory));
+    let file_source = FileMediaSource::from_path(args.base_directory);
+    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
+    let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
+    // Works with any MediaSource implementation
+    tokio::spawn(file_source.run(cmd_rx, evt_tx));
 
 
 
@@ -273,7 +220,7 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     slint_app_window.run()
 }
-fn rust_items_to_slint_model(rust_items: Vec<&MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
+fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
     // Create VecModel directly
     let model = VecModel::<SlintMediaSourceItem>::from(
         rust_items
@@ -281,7 +228,7 @@ fn rust_items_to_slint_model(rust_items: Vec<&MediaSourceItem>) -> ModelRc<Slint
             .map(|rust_item| SlintMediaSourceItem {
                 id: rust_item.id.clone().into(),
                 media_type: convert_media_type(&rust_item.media_type),
-                name: rust_item.name.clone().into(),
+                name: rust_item.title.clone().into(),
             })
             .collect::<Vec<_>>(),
     );
@@ -293,7 +240,7 @@ fn rust_items_to_slint_model(rust_items: Vec<&MediaSourceItem>) -> ModelRc<Slint
 fn convert_media_type(media_type: &MediaType) -> i32 {
     match media_type {
         MediaType::Unspecified => 0,
-        Audiobook => 2,
-        Music => 4,
+        MediaType::Audiobook => 2,
+        MediaType::Music => 4,
     }
 }
