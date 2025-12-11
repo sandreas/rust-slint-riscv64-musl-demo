@@ -134,7 +134,7 @@ impl Player {
     ) {
 
         loop {
-            let name = &self.name.clone();
+            let name = &self.name.as_str();
             let sink = &self.sink;
             tokio::select! {
                 Some(cmd) = cmd_rx.recv() => {

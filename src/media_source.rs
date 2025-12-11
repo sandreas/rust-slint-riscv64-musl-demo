@@ -1,11 +1,25 @@
 use std::fs::File;
 use std::io::BufReader;
+use tokio::sync::mpsc;
 use walkdir::WalkDir;
 
+
+#[derive(Debug)]
+pub enum MediaSourceCommand {
+    Filter(MediaSourceFilter),
+    Find(String),
+}
+
+#[derive(Debug)]
+pub enum MediaSourceEvent/*<'a, 'b>*/ {
+    FilterResults(Vec</*&'a */MediaSourceItem>),
+    FindResult(Option</*&'b */MediaSourceItem>),
+}
+
+
 pub trait MediaSource<T> {
-    async fn init(&mut self) -> ();
-    async fn query(&self, query: MediaSourceQuery) -> Vec<&MediaSourceItem>;
-    async fn find_by_id(&self, id: &str) -> Option<&MediaSourceItem>;
+    async fn filter(&self, query: MediaSourceFilter) -> Vec<&MediaSourceItem>;
+    async fn find(&self, id: &str) -> Option<&MediaSourceItem>;
 
     async fn open_buffer(self, item: MediaSourceItem) -> Option<BufReader<T>>;
 }
@@ -18,6 +32,7 @@ pub enum MediaType {
     // Normal, Audiobook, Bookmark, Music Video, Movie, TV Show, Booklet, Ringtone, Podcast, iTunes U
 }
 
+#[derive(Debug)]
 pub struct MediaSourceItem {
     pub id: String,
     pub media_type: MediaType,
@@ -36,86 +51,62 @@ impl MediaSourceItem {
     // pub fn from_file()
 }
 
-pub struct MediaSourceQuery {
+#[derive(Debug)]
+pub struct MediaSourceFilter {
     pub media_type: MediaType,
 }
 
-impl MediaSourceQuery {
-    pub fn new(media_type: MediaType) -> MediaSourceQuery {
-        MediaSourceQuery {
+impl MediaSourceFilter {
+    pub fn new(media_type: MediaType) -> MediaSourceFilter {
+        MediaSourceFilter {
             media_type,
         }
     }
 }
 
 pub struct FileMediaSource {
-    base_path: String,
-    items: Option<Vec<MediaSourceItem>>, // todo: Option is useless?!
+    items: Vec<MediaSourceItem>, // todo: Option is useless?!
 }
 
-impl FileMediaSource {
-    pub fn new(base_path: String) -> FileMediaSource {
+impl /*<'a,'b> */FileMediaSource {
+    pub fn new(items: Vec<MediaSourceItem>) -> FileMediaSource {
         FileMediaSource {
-            base_path,
-            items: None
+            items
+        }
+    }
+    pub async fn run(
+        &/*'a */mut self,
+        mut cmd_rx: mpsc::UnboundedReceiver<MediaSourceCommand>,
+        evt_tx: mpsc::UnboundedSender<MediaSourceEvent/*<'a, 'b>*/>,
+    ) {
+
+        loop {
+
+            tokio::select! {
+
+                Some(cmd) = cmd_rx.recv() => {
+                    /*
+                    let m: MediaSourceEvent = match cmd {
+                        MediaSourceCommand::Filter(filter) => {
+                            MediaSourceEvent::FilterResults(self.filter(filter).await)
+                        }
+                        MediaSourceCommand::Find(id) => {
+                            MediaSourceEvent::FindResult(self.find(&id).await)
+                        }
+                    };
+
+                     */
+                    // let _ = evt_tx.send(m);
+
+                }
+            }
+
         }
     }
 }
 
 impl MediaSource<File> for FileMediaSource {
 
-    async fn init(&mut self) -> () {
-        let audio_extensions = vec!("mp3", "m4b");
-
-        // let music_dir = PathBuf::from(&self.base_path).join("music");
-        // let audiobook_dir = PathBuf::from(&self.base_path).join("audiobooks");
-
-        let audio_files = WalkDir::new(&self.base_path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let e_clone = e.clone();
-                let metadata = e_clone.metadata().unwrap();
-                if !metadata.is_file() {
-                    return false;
-                }
-                let path = e_clone.into_path();
-                match path.extension() {
-                    Some(ext) => {
-                        return audio_extensions.contains(&ext.to_str().unwrap());
-                    }
-                    None => return false,
-                }
-
-            })
-            .map(|e| {
-                let path = e.path();
-                let path_string = path.to_str().unwrap().to_string();
-                let start_index = self.base_path.len();
-                let rel_path = &path_string[start_index..];
-                let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
-                let media_type = if rel_path.starts_with("/music/") {
-                    MediaType::Music
-                }
-                else if file_name.starts_with("/audiobooks/") {
-                    MediaType::Audiobook
-                } else {
-                    MediaType::Unspecified
-                };
-
-                let name = e.file_name().to_string_lossy().to_string();
-                let item = MediaSourceItem {
-                    id: name.clone(),
-                    media_type,
-                    name,
-                };
-                // (item.id.clone(), item) // (key, value) for HashMap
-                item
-            }).collect::<Vec<MediaSourceItem>>();
-            // .collect::<HashMap<String, MediaSourceItem>>();
-
-        self.items = Some(audio_files);
-    }
 
     /*
     async fn query(&self, _query: Query) -> impl Iterator<Item = &MediaSourceItem> {
@@ -127,14 +118,11 @@ impl MediaSource<File> for FileMediaSource {
     }
 */
 
-    async fn query(&self, query: MediaSourceQuery) -> Vec<&MediaSourceItem> {
-        match &self.items {
-            Some(items) => items
+    async fn filter/*<'a>*/(&/*'a*/ self, query: MediaSourceFilter<>) -> Vec<&MediaSourceItem> {
+        self.items
                 .iter()
                 .filter(|item| item.media_type == query.media_type)
-                .collect(),
-            None => Vec::new(),
-        }
+                .collect()
     }
     /*
     async fn query(&self, query: Query) -> impl Iterator<Item = &MediaSourceItem> {
@@ -159,10 +147,8 @@ impl MediaSource<File> for FileMediaSource {
         }
     }
     */
-    async fn find_by_id(&self, id: &str) -> Option<&MediaSourceItem> {
-        self.items
-            .as_ref()                           // Option<&Vec<_>>
-            .and_then(|v| v.iter().find(|item| item.id == id))
+    async fn find/*<'a>*/(&/*'a*/ self, id: &str) -> Option<&MediaSourceItem> {
+        self.items.iter().find(|item| item.id == id)
     }
     async fn open_buffer(self, item: MediaSourceItem) -> Option<BufReader<File>> {
         Some(BufReader::new(File::open(item.id).unwrap()))

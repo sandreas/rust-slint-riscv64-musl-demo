@@ -5,6 +5,8 @@ use tokio::sync::mpsc;
 
 mod player;
 mod media_source;
+mod headset;
+mod gpio_button_service;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -15,7 +17,7 @@ struct Args {
 }
 
 use crate::media_source::MediaType::Audiobook;
-use crate::media_source::{FileMediaSource, MediaSource, MediaSourceItem, MediaSourceQuery, MediaType};
+use crate::media_source::{FileMediaSource, MediaSource, MediaSourceItem, MediaSourceFilter, MediaType, MediaSourceEvent, MediaSourceCommand};
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use slint::{
     ComponentHandle,
@@ -27,7 +29,10 @@ use slint::{
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
+use evdev::Device;
+use walkdir::WalkDir;
 use MediaType::Music;
+use crate::headset::{Headset, HeadsetEvent};
 
 slint::include_modules!();
 
@@ -51,89 +56,146 @@ async fn main() -> Result<(), slint::PlatformError> {
         return Err(slint::PlatformError::Other(format!("Base directory does not exist: {}", args.base_directory)));
     }
 
-    /*
-    for entry in WalkDir::new(base_path) {
-        println!("{}", entry.unwrap().path().display());
-    }
-    */
 
-
-    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
-    let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
+    let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+    let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
 
     tokio::spawn(async move {
         let mut player = Player::new("player".to_string(), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
-        player.run(cmd_rx, evt_tx).await;
-    });
-
-    // Spawn receiver for worker events
-    tokio::spawn(async move {
-        while let Some(event) = evt_rx.recv().await {
-            println!("Received event: {:?}", event);
-        }
+        player.run(player_cmd_rx, player_evt_tx).await;
     });
 
 
+        let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
+        let (source_evt_tx, mut source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
+
+        tokio::spawn(async move {
+            let base_path = args.base_directory.as_str();
+            let audio_extensions = vec!("mp3", "m4b");
+
+            // let music_dir = PathBuf::from(&self.base_path).join("music");
+            // let audiobook_dir = PathBuf::from(&self.base_path).join("audiobooks");
+
+            let audio_files = WalkDir::new(&base_path)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| {
+                    let e_clone = e.clone();
+                    let metadata = e_clone.metadata().unwrap();
+                    if !metadata.is_file() {
+                        return false;
+                    }
+                    let path = e_clone.into_path();
+                    match path.extension() {
+                        Some(ext) => {
+                            return audio_extensions.contains(&ext.to_str().unwrap());
+                        }
+                        None => return false,
+                    }
+
+                })
+                .map(|e| {
+                    let path = e.path();
+                    let path_string = path.to_str().unwrap().to_string();
+                    let start_index = base_path.len();
+                    let rel_path = &path_string[start_index..];
+                    let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+                    let media_type = if rel_path.starts_with("/music/") {
+                        MediaType::Music
+                    }
+                    else if file_name.starts_with("/audiobooks/") {
+                        MediaType::Audiobook
+                    } else {
+                        MediaType::Unspecified
+                    };
+
+                    let name = e.file_name().to_string_lossy().to_string();
+                    let item = MediaSourceItem {
+                        id: name.clone(),
+                        media_type,
+                        name,
+                    };
+                    // (item.id.clone(), item) // (key, value) for HashMap
+                    item
+                }).collect::<Vec<MediaSourceItem>>();
+
+            /*
+            let mut source = FileMediaSource::new(audio_files);
+            source.run(source_cmd_rx, source_evt_tx).await;
+             */
+        });
 
 
-    // Example: send command to update the string
-    // cmd_tx.send(PlayerCommand::Update("NewName".to_string())).unwrap();
 
-    let mut file_media_source = FileMediaSource::new(base_path.to_str().unwrap().to_string());
+        let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+        tokio::spawn(async move {
+            let device_path ="/dev/input/event13";
+            let device = Device::open(Path::new(&device_path)).unwrap();
+            let mut headset = Headset::new(device);
+            // player.run(cmd_rx, evt_tx).await;
+            headset.run(head_event_tx).await;
+        });
+
+            // Spawn receiver for worker events
+            tokio::spawn(async move {
+                while let Some(event) = player_evt_rx.recv().await {
+                    println!("Received event: {:?}", event);
+                }
+            });
+/*
+
+            // Wrap in a VecModel, then ModelRc
+            // let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
+            // let model = Rc::new(VecModel::from(files));
+            // let model_rc = ModelRc::from(model);
 
 
-    // Wrap in a VecModel, then ModelRc
-    // let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
-    // let model = Rc::new(VecModel::from(files));
-    // let model_rc = ModelRc::from(model);
+            // todo: this should happen in a background thread
+            file_media_source.init().await;
+
+            let query = MediaSourceFilter::new(Music);
+            let audiobooks = file_media_source.filter(query).await;
+            let len = audiobooks.iter().len();
 
 
-    // todo: this should happen in a background thread
-    file_media_source.init().await;
+            let vec_model_slint_items = rust_items_to_slint_model(audiobooks);
+            let slint_items = ModelRc::<SlintMediaSourceItem>::from(vec_model_slint_items);
+        */
+//    let model = Rc::new(VecModel::from(audiobooks));
+//    let model_rc = ModelRc::from(model);
 
-    let query = MediaSourceQuery::new(Music);
-    let audiobooks = file_media_source.query(query).await;
-    let len = audiobooks.iter().len();
 
-
-    let vec_model_slint_items = rust_items_to_slint_model(audiobooks);
-    let slint_items = ModelRc::<SlintMediaSourceItem>::from(vec_model_slint_items);
-
-/*    let model = Rc::new(VecModel::from(audiobooks));
-    let model_rc = ModelRc::from(model);
-
- */
 
     let slint_app_window = MainWindow::new()?;
-    slint_app_window.set_items(slint_items);
+    // slint_app_window.set_items(slint_items);
 
     // let slint_app_window_weak = slint_app_window.as_weak();
 
 
     let slint_audio_player = slint_app_window.global::<SlintAudioPlayer>();
     slint_audio_player.on_play_test({
-        let tx = cmd_tx.clone();
+        let tx = player_cmd_tx.clone();
         move || {
             tx.send(PlayerCommand::PlayTest()).unwrap();
         }
     });
 
     slint_audio_player.on_play_media({
-        let tx = cmd_tx.clone();
+        let tx = player_cmd_tx.clone();
         move |file_name: SharedString| {
             tx.send(PlayerCommand::PlayMedia(file_name.to_string())).unwrap();
         }
     });
 
     slint_audio_player.on_play({
-        let tx = cmd_tx.clone();
+        let tx = player_cmd_tx.clone();
         move || {
             tx.send(PlayerCommand::Play()).unwrap();
         }
     });
 
     slint_audio_player.on_pause({
-        let tx = cmd_tx.clone();
+        let tx = player_cmd_tx.clone();
         move || {
             tx.send(PlayerCommand::Pause()).unwrap();
         }
@@ -208,7 +270,6 @@ async fn main() -> Result<(), slint::PlatformError> {
         nav.set_route(vec_of_history[vec_index + 1].clone());
         nav.set_history_index(current_index + 1);
     });
-
 
     slint_app_window.run()
 }
