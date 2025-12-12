@@ -28,5 +28,23 @@ export global SlintPreferences {
     in-out property <ColorScheme> color-scheme: ColorScheme.dark;
     // in-out property <bool> fullscreen: false;
     in-out property <float> brightness: 0.3;
+}
+
+
+
+
+export struct SlintMediaSourceItem {
+    id: string,
+    media_type: int,
+    name: string,
+}
+
+export global SlintMediaSource {
+    in-out property <bool> is-loading;
+    in-out property <[SlintMediaSourceItem]> query-results;
+    // in-out property <SlintMediaSourceItem> find-by-id-result;
+
+    callback query(mediaType: int);
+    callback findById(id: string);
 
 }

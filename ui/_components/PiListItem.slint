@@ -1,0 +1,45 @@
+
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+export component PiListItem inherits Rectangle {
+    callback clicked;
+    in-out property <image> icon;
+    in-out property <bool> has-icon;
+    in property <string> title;
+    in property <string> subtitle;
+    in property <string> description;
+
+    border-radius: 3px;
+    border-color: silver;
+    border-width: 1px;
+
+    HorizontalBox {
+        if has-icon: Image {
+            source: icon;
+            // width: parent.width * 0.382;
+        }
+
+        VerticalBox {
+            // width: parent.width * 0.618;
+            if !title.is-empty: Text {
+                overflow:clip;
+                text: title;
+            }
+            if !subtitle.is-empty: Text {
+                overflow:clip;
+                text: subtitle;
+            }
+            if !description.is-empty: Text {
+                wrap: word-wrap;
+                text: description;
+            }
+        }
+
+    }
+
+    TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+
+}

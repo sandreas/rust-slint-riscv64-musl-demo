@@ -1,6 +1,6 @@
-import { SlintAudioPlayer, SlintIcons, SlintNavigation, SlintPreferences } from "globals.slint";
+import { SlintAudioPlayer, SlintMediaSource, SlintIcons, SlintNavigation, SlintPreferences } from "globals.slint";
 
-export { SlintAudioPlayer, SlintNavigation, SlintPreferences }
+export { SlintAudioPlayer, SlintMediaSource, SlintNavigation, SlintPreferences }
 
 import {
     Button,
@@ -21,25 +21,11 @@ import { Search } from "main/search.slint";
 import { Settings } from "main/settings.slint";
 
 
-export enum SlintMediaType {
-    Unspecified,
-    Audiobook,
-    Music
-    // Normal, Audiobook, Bookmark, Music Video, Movie, TV Show, Booklet, Ringtone, Podcast, iTunes U
-}
-
-export struct SlintMediaSourceItem {
-    id: string,
-    media_type: int,
-    name: string,
-}
 
 
 
 
 export component MainWindow inherits Window {
-    in property <[SlintMediaSourceItem]> items; // Accepts a model of strings
-
     default-font-family: "Lato";
     default-font-size: 16pt;
 
@@ -48,6 +34,8 @@ export component MainWindow inherits Window {
     // 368 x 552
     preferred-width: 368px;
     preferred-height: 552px;
+    max-width: self.preferred-width;
+    max-height: self.preferred-height;
 
     init => {
         // load preferences
@@ -66,16 +54,10 @@ export component MainWindow inherits Window {
         }
     }
 
-
     VerticalBox {
-        padding: 0;
+        padding:0px;
         ScrollView {
-            ListView {
-                for item in items : Text {
-                    text: item.media_type + ": " + item.name;
-                }
-            }
-
+            // padding:0px;
             if SlintNavigation.route[0] == "home": Home { }
             if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
             if SlintNavigation.route[0] == "music": Music { }
@@ -83,6 +65,8 @@ export component MainWindow inherits Window {
             if SlintNavigation.route[0] == "search": Search { }
         }
     }
+
+
     TouchArea {
         x: root.width - swipe-area-width;
         y: 0;
@@ -92,4 +76,5 @@ export component MainWindow inherits Window {
             SlintNavigation.forward();
         }
     }
+
 }

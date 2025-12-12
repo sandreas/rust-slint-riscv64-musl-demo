@@ -18,13 +18,7 @@ struct Args {
 }
 
 use crate::player::{Player, PlayerCommand, PlayerEvent};
-use slint::{
-    ComponentHandle,
-    Model,
-    ModelRc,
-    SharedString,
-    VecModel
-};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, SharedVector, VecModel};
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
@@ -64,31 +58,29 @@ async fn main() -> Result<(), slint::PlatformError> {
         player.run(player_cmd_rx, player_evt_tx).await;
     });
 
+    tokio::spawn(async move {
+        while let Some(event) = player_evt_rx.recv().await {
+            println!("Received event: {:?}", event);
+        }
+    });
 
-    // let file_source: Box<dyn MediaSource> = Box::new(FileMediaSource::from_path(args.base_directory));
+
     let file_source = FileMediaSource::from_path(args.base_directory);
-    let (cmd_tx, cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
-    let (evt_tx, mut evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
-    // Works with any MediaSource implementation
-    tokio::spawn(file_source.run(cmd_rx, evt_tx));
+    let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
+    let (source_evt_tx, mut source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
+    tokio::spawn(file_source.run(source_cmd_rx, source_evt_tx));
 
 
 
-        let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
-        tokio::spawn(async move {
-            let device_path ="/dev/input/event13";
-            let device = Device::open(Path::new(&device_path)).unwrap();
-            let mut headset = Headset::new(device);
-            // player.run(cmd_rx, evt_tx).await;
-            headset.run(head_event_tx).await;
-        });
+    // this part only works when USB-C is plugged in
+    //     let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+    //     tokio::spawn(async move {
+    //         let device_path ="/dev/input/event13";
+    //         let device = Device::open(Path::new(&device_path)).unwrap();
+    //         let mut headset = Headset::new(device);
+    //         headset.run(head_event_tx).await;
+    //     });
 
-            // Spawn receiver for worker events
-            tokio::spawn(async move {
-                while let Some(event) = player_evt_rx.recv().await {
-                    println!("Received event: {:?}", event);
-                }
-            });
 /*
 
             // Wrap in a VecModel, then ModelRc
@@ -218,6 +210,69 @@ async fn main() -> Result<(), slint::PlatformError> {
         nav.set_history_index(current_index + 1);
     });
 
+    let slint_media_source = slint_app_window.global::<SlintMediaSource>();
+    let slint_media_source_ui = slint_app_window.clone_strong();
+    slint_media_source.on_query({
+        let inner = slint_media_source_ui.global::<SlintMediaSource>();
+        // initiate loading
+        inner.set_is_loading(true);
+        // empty results
+        // inner.set_query_results(SharedVector::<SlintMediaSourceItem>::default());
+        inner.set_query_results(slint::ModelRc::default());
+        let tx = source_cmd_tx.clone();
+        move |query| {
+            source_cmd_tx.send(MediaSourceCommand::Filter(query.to_string())).unwrap();
+        }
+        /*
+        // let weak_ui = slint_media_source_ui.as_weak();  // Create Weak before closure
+        let inner = slint_media_source_ui.global::<SlintMediaSource>();
+        move |media_type_int| {
+            let media_type = convert_int_to_media_type(media_type_int);
+            let query_media_items = media_items
+                .into_iter()
+                .filter(|item| item.media_type == media_type)
+                .collect();
+            inner.set_query_results(rust_items_to_slint_model(query_media_items));
+        }
+
+         */
+    });
+
+
+
+    let ui_handle = slint_media_source_ui.as_weak();   // or clone the handle
+
+    // Move the receiver into the Slint task
+    slint::spawn_local(async move {
+        let mut source_evt_rx = source_evt_rx;  // now owned in this async block
+
+        while let Some(event) = source_evt_rx.recv().await {
+            if let Some(ui) = ui_handle.upgrade() {
+                let inner = ui.global::<SlintMediaSource>();
+
+                match event {
+                    MediaSourceEvent::FilterResults(items) => {
+                        inner.set_query_results(rust_items_to_slint_model(items));
+                    }
+                    MediaSourceEvent::FindResult(opt_item) => {
+                        if let Some(item) = opt_item {
+                            inner.set_query_results(
+                                rust_items_to_slint_model(vec![item])
+                            );
+                        } else {
+                            // clear results if nothing found
+                            inner.set_query_results(slint::ModelRc::default());
+                        }
+                    }
+                }
+            } else {
+                // UI was dropped; stop listening
+                break;
+            }
+        }
+    }).unwrap();
+
+
     slint_app_window.run()
 }
 fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
@@ -227,7 +282,7 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
             .into_iter()
             .map(|rust_item| SlintMediaSourceItem {
                 id: rust_item.id.clone().into(),
-                media_type: convert_media_type(&rust_item.media_type),
+                media_type: convert_media_type_to_int(&rust_item.media_type),
                 name: rust_item.title.clone().into(),
             })
             .collect::<Vec<_>>(),
@@ -237,10 +292,19 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
     ModelRc::from(Rc::new(model))
 }
 
-fn convert_media_type(media_type: &MediaType) -> i32 {
+fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
     match media_type {
         MediaType::Unspecified => 0,
         MediaType::Audiobook => 2,
         MediaType::Music => 4,
+    }
+}
+
+
+fn convert_int_to_media_type(media_type: i32) -> MediaType {
+    match media_type {
+        2 => MediaType::Audiobook,
+        4 => MediaType::Music,
+        _ => MediaType::Unspecified,
     }
 }

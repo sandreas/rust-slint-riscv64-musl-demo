@@ -127,6 +127,11 @@ That's it for now, more to come.
 - [ ] Implement the Sync software for the Desktop / Mobile devices
 
 
+# Slint problems
+- [ ] image can't be checked conditionally in components (if image.is-present: Image {})
+- [ ] There is no Template Component option (ListView { template: MyCustomComponent})
+- [ ] GridLayout does not support for loops
+
 
 # Notes
 - Routing: https://github.com/slint-ui/slint/discussions/6783

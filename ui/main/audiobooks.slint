@@ -1,5 +1,6 @@
 import {
     Button,
+    ListView,
     HorizontalBox,
     Palette,
     ScrollView,
@@ -8,20 +9,34 @@ import {
     VerticalBox,
 } from "std-widgets.slint";
 
-import {SlintAudioPlayer} from "../globals.slint";
+import {SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
+import { PiListItem } from "../_components/PiListItem.slint";
 
 export component Audiobooks {
+    padding: 0px;
+    // in-out property <[SlintMediaSourceItem]> items; // Accepts a model of strings
+
+    init => {
+        SlintMediaSource.query(2);
+    }
+
     VerticalBox {
-        HorizontalBox {
-            Button {
-                text: "play something";
-                clicked => {
-                    SlintAudioPlayer.play();
-                }
-            }
-            Text {
-                text: "Audio Books";
-            }
+        Rectangle {
+            border-color:black;
+            border-width:1px;
+            width:100%;
+            height:50px;
+            background: red;
         }
+
+        for item in SlintMediaSource.query-results:
+            PiListItem {
+                max-width: 368px;
+                title: "test"; //item.name;
+                // subtitle: item.name;
+                // description: item.name;
+
+            }
+
     }
 }
