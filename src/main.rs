@@ -67,10 +67,8 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let file_source = FileMediaSource::from_path(args.base_directory);
     let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
-    let (source_evt_tx, mut source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
+    let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
     tokio::spawn(file_source.run(source_cmd_rx, source_evt_tx));
-
-
 
     // this part only works when USB-C is plugged in
     //     let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
@@ -80,30 +78,6 @@ async fn main() -> Result<(), slint::PlatformError> {
     //         let mut headset = Headset::new(device);
     //         headset.run(head_event_tx).await;
     //     });
-
-/*
-
-            // Wrap in a VecModel, then ModelRc
-            // let files = vec![SharedString::from("a"), SharedString::from("b"), SharedString::from("c")];
-            // let model = Rc::new(VecModel::from(files));
-            // let model_rc = ModelRc::from(model);
-
-
-            // todo: this should happen in a background thread
-            file_media_source.init().await;
-
-            let query = MediaSourceFilter::new(Music);
-            let audiobooks = file_media_source.filter(query).await;
-            let len = audiobooks.iter().len();
-
-
-            let vec_model_slint_items = rust_items_to_slint_model(audiobooks);
-            let slint_items = ModelRc::<SlintMediaSourceItem>::from(vec_model_slint_items);
-        */
-//    let model = Rc::new(VecModel::from(audiobooks));
-//    let model_rc = ModelRc::from(model);
-
-
 
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
@@ -214,38 +188,19 @@ async fn main() -> Result<(), slint::PlatformError> {
     let slint_media_source_ui = slint_app_window.clone_strong();
     slint_media_source.on_query({
         let inner = slint_media_source_ui.global::<SlintMediaSource>();
-        // initiate loading
         inner.set_is_loading(true);
-        // empty results
-        // inner.set_query_results(SharedVector::<SlintMediaSourceItem>::default());
-        inner.set_query_results(slint::ModelRc::default());
-        let tx = source_cmd_tx.clone();
+        inner.set_query_results(ModelRc::default());
         move |query| {
             source_cmd_tx.send(MediaSourceCommand::Filter(query.to_string())).unwrap();
         }
-        /*
-        // let weak_ui = slint_media_source_ui.as_weak();  // Create Weak before closure
-        let inner = slint_media_source_ui.global::<SlintMediaSource>();
-        move |media_type_int| {
-            let media_type = convert_int_to_media_type(media_type_int);
-            let query_media_items = media_items
-                .into_iter()
-                .filter(|item| item.media_type == media_type)
-                .collect();
-            inner.set_query_results(rust_items_to_slint_model(query_media_items));
-        }
-
-         */
     });
 
 
 
-    let ui_handle = slint_media_source_ui.as_weak();   // or clone the handle
-
-    // Move the receiver into the Slint task
+    let ui_handle = slint_media_source_ui.as_weak();
     slint::spawn_local(async move {
-        let mut source_evt_rx = source_evt_rx;  // now owned in this async block
-
+        // now owned in this async block
+        let mut source_evt_rx = source_evt_rx;
         while let Some(event) = source_evt_rx.recv().await {
             if let Some(ui) = ui_handle.upgrade() {
                 let inner = ui.global::<SlintMediaSource>();
