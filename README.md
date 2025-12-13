@@ -11,6 +11,7 @@ Here is how it looks at the moment:
 
 ![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
 
+![lichee-raw-compressed.mp4](assets/video/lichee-raw-compressed.mp4)
 
 And here is a draft for the case:
 
