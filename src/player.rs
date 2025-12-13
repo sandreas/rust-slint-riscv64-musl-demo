@@ -6,10 +6,12 @@ use cpal::Device;
 use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
 use std::fs::File;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 use rodio::source::SeekError;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
+use crate::media_source_trait::MediaSource;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
@@ -29,18 +31,18 @@ pub enum PlayerEvent {
 }
 
 pub struct Player {
-    pub name: String,
+    media_source: Arc<dyn MediaSource>,
     stream: OutputStream, // when removed, the samples do not play
     sink: Sink,
 }
 
 impl Player {
     // sink:Option<Sink>, stream: Option<OutputStream>
-    pub fn new( name: String, device_name: String, fallback_device_name: String) -> Player {
+    pub fn new(media_source: Arc<dyn MediaSource>, device_name: String, fallback_device_name: String) -> Player {
         let builder = Player::create_device_output_builder(device_name, fallback_device_name);
         let stream = builder.open_stream_or_fallback().unwrap();
         let sink = Sink::connect_new(stream.mixer());
-        Self { name, sink, stream }
+        Self { media_source, sink, stream }
     }
     //                     let match_string = "USB-C to 3.5mm Headphone Jack A";
     //                     let match_string2 = "pipewire";
@@ -98,6 +100,7 @@ impl Player {
     }
 
     async fn play_media(sink:&Sink, id: String) {
+        
         let path = Path::new(&id);
         if !path.exists() {
             return
@@ -134,7 +137,6 @@ impl Player {
     ) {
 
         loop {
-            let name = &self.name.as_str();
             let sink = &self.sink;
             tokio::select! {
                 Some(cmd) = cmd_rx.recv() => {
@@ -164,7 +166,7 @@ impl Player {
                 }
                 _ = tokio::time::sleep(Duration::from_secs(10)) => {
 
-                    let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", name)));
+                    let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
                 }
             }
         }
@@ -185,7 +187,7 @@ impl Player {
                 return;
             }
 
-        }
+        }<
 
         let file = File::open(path).unwrap();
         self.sink.append(rodio::Decoder::try_from(file).unwrap());

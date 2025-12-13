@@ -1,15 +1,20 @@
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, Read};
+use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct FileMediaSource {
-    base_path: String,
-    items: Vec<MediaSourceItem>,
+    state: Arc<Mutex<FileMediaSourceState>>,
+}
+
+struct FileMediaSourceState {
+    pub base_path: String,
+    pub items: Vec<MediaSourceItem>,
 }
 
 impl FileMediaSource {
@@ -63,8 +68,10 @@ impl FileMediaSource {
             }).collect::<Vec<MediaSourceItem>>();
 
         Self {
-            base_path,
-            items: audio_files
+            state: Arc::new(Mutex::new(FileMediaSourceState {
+                base_path,
+                items: audio_files
+            })),
         }
     }
 
@@ -75,26 +82,34 @@ impl FileMediaSource {
 #[async_trait]
 impl MediaSource for FileMediaSource {
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
+        let inner = self.state.lock().unwrap();
         let q = query.to_lowercase();
-        self.items
+        let results = inner.items
             .iter()
             .filter(|item| {
                 item.title.to_lowercase().contains(&q)
                     || item.id.to_lowercase().contains(&q)
             })
             .cloned()
-            .collect()
+            .collect();
+        drop(inner);
+        results
     }
 
     async fn find(&self, id: &str) -> Option<MediaSourceItem> {
-        self.items
+        let inner = self.state.lock().unwrap();
+        let result = inner.items
             .iter()
             .find(|item| item.id == id)
-            .cloned()
+            .cloned();
+        drop(inner);
+        result
     }
 
     async fn open(&self, id: &str) -> io::Result<Box<BufReader<dyn Read + Send + 'static>>> {
-        let path = format!("{}/{}.ogg", self.base_path, id);
+        let inner = self.state.lock().unwrap();
+        let path = format!("{}/{}.ogg", inner.base_path, id);
+        drop(inner);
         let file = std::fs::File::open(path)?;
         let buf_reader = BufReader::new(file);
         Ok(Box::new(buf_reader))

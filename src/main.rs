@@ -22,6 +22,7 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, SharedVector, VecMode
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
 use evdev::Device;
 use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
@@ -50,11 +51,20 @@ async fn main() -> Result<(), slint::PlatformError> {
     }
 
 
+
+
+
+    let file_source = FileMediaSource::new(args.base_directory);
+    let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
+    let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
+
+    tokio::spawn(file_source.clone().run(source_cmd_rx, source_evt_tx));
+
+
     let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
-
     tokio::spawn(async move {
-        let mut player = Player::new("player".to_string(), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
+        let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
         player.run(player_cmd_rx, player_evt_tx).await;
     });
 
@@ -63,12 +73,6 @@ async fn main() -> Result<(), slint::PlatformError> {
             println!("Received event: {:?}", event);
         }
     });
-
-
-    let file_source = FileMediaSource::new(args.base_directory);
-    let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
-    let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
-    tokio::spawn(file_source.run(source_cmd_rx, source_evt_tx));
 
     // this part only works when USB-C is plugged in
     //     let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
