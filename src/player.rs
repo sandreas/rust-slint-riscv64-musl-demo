@@ -35,6 +35,7 @@ pub struct Player {
     media_source: Arc<dyn MediaSource>,
     stream: OutputStream, // when removed, the samples do not play
     sink: Sink,
+    loaded_id: String,
 }
 
 impl Player {
@@ -43,7 +44,7 @@ impl Player {
         let builder = Self::create_device_output_builder(device_name, fallback_device_name);
         let stream = builder.open_stream_or_fallback().unwrap();
         let sink = Sink::connect_new(stream.mixer());
-        Self { media_source, sink, stream }
+        Self { media_source, sink, stream, loaded_id: String::from("") }
     }
     //                     let match_string = "USB-C to 3.5mm Headphone Jack A";
     //                     let match_string2 = "pipewire";
@@ -101,6 +102,11 @@ impl Player {
         }
     }
     async fn play_media(&mut self, id: String) -> io::Result<()> {
+
+        if id == self.loaded_id {
+            self.toggle();
+            return Ok(());
+        }
         // todo: this is a dirty hack, because somehow self.media_source.open is more complex to implement to work with rodio
         let base_dir = self.media_source.id();
         let relative_dir = id.trim_start_matches('/');
@@ -113,23 +119,17 @@ impl Player {
         self.sink.clear();
         self.sink.append(rodio::Decoder::try_from(file).unwrap());
         self.sink.play();
-
+        self.loaded_id = id;
         Ok(())
     }
 
-    async fn play_media2(sink:&Sink, id: String) {
-
-        let path = Path::new(&id);
-        if !path.exists() {
-            return
+    fn toggle(&self) {
+        if self.sink.is_paused() {
+            self.sink.play()
+        } else {
+            self.sink.pause()
         }
-
-        let file = File::open(path).unwrap();
-        sink.clear();
-        sink.append(rodio::Decoder::try_from(file).unwrap());
-        sink.play();
     }
-
 
     fn play(sink: &Sink) {
         sink.play();
