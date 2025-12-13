@@ -51,13 +51,13 @@ impl FileMediaSource {
                 let media_type = if rel_path.starts_with("/music/") {
                     MediaType::Music
                 }
-                else if file_name.starts_with("/audiobooks/") {
+                else if rel_path.starts_with("/audiobooks/") {
                     MediaType::Audiobook
                 } else {
                     MediaType::Unspecified
                 };
 
-                let title = e.file_name().to_string_lossy().to_string();
+                let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
                 let item = MediaSourceItem {
                     id: path_string[start_index..].to_string(), // title.clone(),
                     media_type,
@@ -87,15 +87,20 @@ impl MediaSource for FileMediaSource {
         drop(inner);
         id
     }
-    
+
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
         let inner = self.state.lock().unwrap();
-        let q = query.to_lowercase();
+        // let q = query.to_lowercase();
+        let media_type = match query {
+            "4" => MediaType::Music,
+            "2" => MediaType::Audiobook,
+            _ => MediaType::Unspecified
+        };
+
         let results = inner.items
             .iter()
             .filter(|item| {
-                item.title.to_lowercase().contains(&q)
-                    || item.id.to_lowercase().contains(&q)
+                item.media_type.eq(&media_type)
             })
             .cloned()
             .collect();

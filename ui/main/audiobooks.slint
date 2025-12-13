@@ -32,7 +32,7 @@ export component Audiobooks {
         for item in SlintMediaSource.query-results:
             PiListItem {
                 max-width: 368px;
-                title: "test"; //item.name;
+                title: item.name;
                 // subtitle: item.name;
                 // description: item.name;
                 clicked => {
