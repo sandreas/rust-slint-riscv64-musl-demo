@@ -12,9 +12,8 @@ Here is how it looks at the moment:
 ![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
 
 
-<video width="270" height="480" controls="">
-  <source src="assets/video/lichee-raw-compressed.mp4" type="video/mp4">
-</video>
+[![Watch the video](https://raw.githubusercontent.com/sandreas/rust-slint-riscv64-musl-demo/main/assets/img/lichee-rv-nano-player.png)](https://raw.githubusercontent.com/sandreas/rust-slint-riscv64-musl-demo/main/assets/video/lichee-raw-compressed.mp4)
+
 
 And here is a draft for the case:
 
