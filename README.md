@@ -11,7 +11,10 @@ Here is how it looks at the moment:
 
 ![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
 
-![lichee-raw-compressed.mp4](assets/video/lichee-raw-compressed.mp4)
+
+<video width="270" height="480" controls="">
+  <source src="assets/video/lichee-raw-compressed.mp4" type="video/mp4">
+</video>
 
 And here is a draft for the case:
 
