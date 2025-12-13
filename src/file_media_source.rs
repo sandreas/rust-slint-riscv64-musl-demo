@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
-use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
+use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType, ReadableSeeker};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -81,6 +81,13 @@ impl FileMediaSource {
 
 #[async_trait]
 impl MediaSource for FileMediaSource {
+    fn id(&self) -> String {
+        let inner = self.state.lock().unwrap();
+        let id = inner.base_path.clone();
+        drop(inner);
+        id
+    }
+    
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
         let inner = self.state.lock().unwrap();
         let q = query.to_lowercase();
@@ -106,13 +113,13 @@ impl MediaSource for FileMediaSource {
         result
     }
 
-    async fn open(&self, id: &str) -> io::Result<Box<BufReader<dyn Read + Send + 'static>>> {
+    async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>> {
         let inner = self.state.lock().unwrap();
         let path = format!("{}/{}.ogg", inner.base_path, id);
         drop(inner);
         let file = std::fs::File::open(path)?;
         let buf_reader = BufReader::new(file);
-        Ok(Box::new(buf_reader))
+        Ok(Arc::new(Mutex::new(buf_reader)))
     }
 
     async fn run(

@@ -5,7 +5,8 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
 use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
 use std::fs::File;
-use std::path::Path;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use rodio::source::SeekError;
@@ -39,14 +40,14 @@ pub struct Player {
 impl Player {
     // sink:Option<Sink>, stream: Option<OutputStream>
     pub fn new(media_source: Arc<dyn MediaSource>, device_name: String, fallback_device_name: String) -> Player {
-        let builder = Player::create_device_output_builder(device_name, fallback_device_name);
+        let builder = Self::create_device_output_builder(device_name, fallback_device_name);
         let stream = builder.open_stream_or_fallback().unwrap();
         let sink = Sink::connect_new(stream.mixer());
         Self { media_source, sink, stream }
     }
     //                     let match_string = "USB-C to 3.5mm Headphone Jack A";
     //                     let match_string2 = "pipewire";
-    pub fn create_device_output_builder(preferred_name: String, fallback_name: String) -> OutputStreamBuilder {
+    fn create_device_output_builder(preferred_name: String, fallback_name: String) -> OutputStreamBuilder {
         let host = cpal::default_host();
         let devices = host.output_devices().unwrap();
 
@@ -87,7 +88,8 @@ impl Player {
         builder
     }
 
-    async fn play_test(sink: &Sink) {
+    async fn play_test(&mut self) {
+        let sink = &self.sink;
         let waves = vec!(230f32, 270f32, 330f32,270f32, 230f32);
         for w in waves {
             let source = rodio::source::SineWave::new(w).amplify(0.1);
@@ -98,9 +100,25 @@ impl Player {
             sink.clear();
         }
     }
+    async fn play_media(&mut self, id: String) -> io::Result<()> {
+        // todo: this is a dirty hack, because somehow self.media_source.open is more complex to implement to work with rodio
+        let base_dir = self.media_source.id();
+        let relative_dir = id.trim_start_matches('/');
+        let path = Path::new(base_dir.as_str()).join(relative_dir);
+        if !path.exists() {
+            return Ok(()); // todo handle error
+        }
 
-    async fn play_media(sink:&Sink, id: String) {
-        
+        let file = File::open(path)?;
+        self.sink.clear();
+        self.sink.append(rodio::Decoder::try_from(file).unwrap());
+        self.sink.play();
+
+        Ok(())
+    }
+
+    async fn play_media2(sink:&Sink, id: String) {
+
         let path = Path::new(&id);
         if !path.exists() {
             return
@@ -143,14 +161,14 @@ impl Player {
                     match cmd {
                         PlayerCommand::Update(s) => {
                             let x = s.clone();
-                            Player::play_media(sink, s.clone()).await;
+                            self.play_media(s.clone()).await;
                             let _ = evt_tx.send(PlayerEvent::Status(format!("Playing {}", x)));
                         }
                         PlayerCommand::PlayTest() => {
-                            Player::play_test(sink).await;
+                            self.play_test().await;
                         }
                         PlayerCommand::PlayMedia(s) => {
-                            Player::play_media(sink, s).await;
+                            self.play_media(s).await;
                         }
                         PlayerCommand::Play() => {
                             Player::play(sink);

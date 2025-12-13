@@ -1,6 +1,11 @@
 use std::io;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek};
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+
+// Supertrait combining both
+pub trait ReadableSeeker: Read + Seek {}
+impl<T: Read + Seek> ReadableSeeker for T {}
 
 #[derive(Debug)]
 pub enum MediaSourceCommand {
@@ -32,11 +37,12 @@ pub struct MediaSourceItem {
 
 #[async_trait::async_trait]
 pub trait MediaSource: Send + Sync {
+    fn id(&self) -> String;
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem>;
     async fn find(&self, id: &str) -> Option<MediaSourceItem>;
 
-    async fn open(&self, id: &str) -> io::Result<Box<BufReader<dyn Read + Send + 'static>>>;
-    
+    async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>>;
+
     /// Async run loop - consumes self
     async fn run(
         self,
