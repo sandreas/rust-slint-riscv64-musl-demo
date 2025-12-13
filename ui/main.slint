@@ -29,13 +29,12 @@ export component MainWindow inherits Window {
     default-font-family: "Lato";
     default-font-size: 16pt;
 
+
     in-out property <physical-length> swipe-area-width: 50px;
 
     // 368 x 552
-    preferred-width: 368px;
-    preferred-height: 552px;
-    max-width: self.preferred-width;
-    max-height: self.preferred-height;
+    width: 368px;
+    height: 552px;
 
     init => {
         // load preferences
@@ -45,6 +44,7 @@ export component MainWindow inherits Window {
     }
 
     TouchArea {
+        padding:0px;
         x: 0;
         y: 0;
         width: swipe-area-width;
@@ -56,18 +56,16 @@ export component MainWindow inherits Window {
 
     VerticalBox {
         padding:0px;
-        ScrollView {
-            // padding:0px;
-            if SlintNavigation.route[0] == "home": Home { }
-            if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
-            if SlintNavigation.route[0] == "music": Music { }
-            if SlintNavigation.route[0] == "settings": Settings { }
-            if SlintNavigation.route[0] == "search": Search { }
-        }
+        if SlintNavigation.route[0] == "home": Home { }
+        if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
+        if SlintNavigation.route[0] == "music": Music { }
+        if SlintNavigation.route[0] == "settings": Settings { }
+        if SlintNavigation.route[0] == "search": Search { }
     }
 
 
     TouchArea {
+        padding:0px;
         x: root.width - swipe-area-width;
         y: 0;
         width: swipe-area-width;

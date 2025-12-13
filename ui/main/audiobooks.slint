@@ -1,3 +1,8 @@
+// solving lists without gridlayout supporting it: https://github.com/slint-ui/slint/discussions/5422
+// sample slint programs:
+// - https://github.com/Vadoola/Tomotroid
+// - https://github.com/slint-ui/slint/tree/master/demos/home-automation
+
 import {
     Button,
     ListView,
@@ -13,7 +18,6 @@ import {SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globa
 import { PiListItem } from "../_components/PiListItem.slint";
 
 export component Audiobooks {
-    padding: 0px;
     // in-out property <[SlintMediaSourceItem]> items; // Accepts a model of strings
 
     init => {
@@ -21,6 +25,11 @@ export component Audiobooks {
     }
 
     VerticalBox {
+        padding:0px;
+        padding-left:15px;
+
+
+/*
         Rectangle {
             border-color:black;
             border-width:1px;
@@ -28,17 +37,20 @@ export component Audiobooks {
             height:50px;
             background: red;
         }
-
-        for item in SlintMediaSource.query-results:
-            PiListItem {
-                max-width: 368px;
-                title: item.name;
-                // subtitle: item.name;
-                // description: item.name;
-                clicked => {
-                    SlintAudioPlayer.play_media(item.id);
+*/
+        ScrollView {
+            for item in SlintMediaSource.query-results:
+                PiListItem {
+                    height:80px;
+                    title: item.name;
+                    subtitle: "#1 - Whatever";
+                    description: "Autor - Sprecher";
+                    clicked => {
+                        SlintAudioPlayer.play_media(item.id);
+                    }
                 }
-            }
+
+        }
 
     }
 }

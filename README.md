@@ -137,6 +137,9 @@ That's it for now, more to come.
 - [ ] image can't be checked conditionally in components (if image.is-present: Image {})
 - [ ] There is no Template Component option (ListView { template: MyCustomComponent})
 - [ ] GridLayout does not support for loops
+- [ ] Swipe Gesture Handler makes using sliders impossible #6781
+- [ ] Async is not supported #4377
+- [ ] Scrollview has a margin right, regardless of showing scrollbar or not
 
 
 # Notes

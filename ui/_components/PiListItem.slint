@@ -10,36 +10,49 @@ export component PiListItem inherits Rectangle {
 
     border-radius: 3px;
     border-color: silver;
-    border-width: 1px;
+    border-width: 2px;
 
-    HorizontalBox {
-        if has-icon: Image {
-            source: icon;
-            // width: parent.width * 0.382;
+
+    VerticalBox {
+        HorizontalBox {
+            min-height:80px;
+            spacing: 5px;
+            padding:0px;
+            if has-icon:
+                Image {
+                    width: 25%;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    source: icon;
+                }
+
+
+            VerticalBox {
+                padding:0px;
+                spacing: 0px;
+                if !title.is-empty: Text {
+                    font-size: 1.3rem;
+                    font-weight: 1500;
+                    vertical-alignment: center;
+                    overflow:elide;
+                    text: title;
+                }
+                if !subtitle.is-empty: Text {
+                    font-size:0.8rem;
+                    overflow:clip;
+                    text: subtitle;
+                }
+                if !description.is-empty: Text {
+
+                    wrap: word-wrap;
+                    text: description;
+                }
+            }
         }
-
-        VerticalBox {
-            // width: parent.width * 0.618;
-            if !title.is-empty: Text {
-                overflow:clip;
-                text: title;
-            }
-            if !subtitle.is-empty: Text {
-                overflow:clip;
-                text: subtitle;
-            }
-            if !description.is-empty: Text {
-                wrap: word-wrap;
-                text: description;
-            }
-        }
-
     }
-
     TouchArea {
         clicked => {
             root.clicked();
         }
     }
-
 }
