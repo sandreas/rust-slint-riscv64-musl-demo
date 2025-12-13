@@ -65,7 +65,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
 
 
-    let file_source = FileMediaSource::from_path(args.base_directory);
+    let file_source = FileMediaSource::new(args.base_directory);
     let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
     let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
     tokio::spawn(file_source.run(source_cmd_rx, source_evt_tx));

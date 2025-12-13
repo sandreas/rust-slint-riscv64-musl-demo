@@ -35,7 +35,9 @@ export component Audiobooks {
                 title: "test"; //item.name;
                 // subtitle: item.name;
                 // description: item.name;
-
+                clicked => {
+                    SlintAudioPlayer.play_media(item.id);
+                }
             }
 
     }

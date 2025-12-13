@@ -1,3 +1,5 @@
+use std::io;
+use std::io::{BufReader, Read};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 #[derive(Debug)]
@@ -33,6 +35,8 @@ pub trait MediaSource: Send + Sync {
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem>;
     async fn find(&self, id: &str) -> Option<MediaSourceItem>;
 
+    async fn open(&self, id: &str) -> io::Result<Box<BufReader<dyn Read + Send + 'static>>>;
+    
     /// Async run loop - consumes self
     async fn run(
         self,

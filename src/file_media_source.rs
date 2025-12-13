@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io;
+use std::io::{BufReader, Read};
 use async_trait::async_trait;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
@@ -5,11 +8,12 @@ use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEven
 
 #[derive(Debug)]
 pub struct FileMediaSource {
+    base_path: String,
     items: Vec<MediaSourceItem>,
 }
 
 impl FileMediaSource {
-    pub fn from_path(base_path: String) -> Self {
+    pub fn new(base_path: String) -> Self {
         let audio_extensions = vec!("mp3", "m4b");
 
         // let music_dir = PathBuf::from(&self.base_path).join("music");
@@ -50,7 +54,7 @@ impl FileMediaSource {
 
                 let title = e.file_name().to_string_lossy().to_string();
                 let item = MediaSourceItem {
-                    id: title.clone(),
+                    id: path_string[start_index..].to_string(), // title.clone(),
                     media_type,
                     title,
                 };
@@ -58,12 +62,12 @@ impl FileMediaSource {
                 item
             }).collect::<Vec<MediaSourceItem>>();
 
-        Self::new(audio_files)
+        Self {
+            base_path,
+            items: audio_files
+        }
     }
 
-    pub fn new(items: Vec<MediaSourceItem>) -> Self {
-        Self { items }
-    }
 }
 
 
@@ -87,6 +91,13 @@ impl MediaSource for FileMediaSource {
             .iter()
             .find(|item| item.id == id)
             .cloned()
+    }
+
+    async fn open(&self, id: &str) -> io::Result<Box<BufReader<dyn Read + Send + 'static>>> {
+        let path = format!("{}/{}.ogg", self.base_path, id);
+        let file = std::fs::File::open(path)?;
+        let buf_reader = BufReader::new(file);
+        Ok(Box::new(buf_reader))
     }
 
     async fn run(
