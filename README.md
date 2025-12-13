@@ -12,7 +12,10 @@ Here is how it looks at the moment:
 ![lichee-rv-nano-player.png](assets/img/lichee-rv-nano-player.png)
 
 
-[![Watch the video](https://raw.githubusercontent.com/sandreas/rust-slint-riscv64-musl-demo/main/assets/img/lichee-rv-nano-player.png)](https://raw.githubusercontent.com/sandreas/rust-slint-riscv64-musl-demo/main/assets/video/lichee-raw-compressed.mp4)
+
+https://github.com/user-attachments/assets/adb3bb52-6b7d-4787-a1df-c830594121e7
+
+
 
 
 And here is a draft for the case:
