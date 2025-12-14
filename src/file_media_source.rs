@@ -1,11 +1,19 @@
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, Read};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
+use lofty::error::LoftyError;
+use lofty::file::TaggedFileExt;
+use lofty::probe::Probe;
+use lofty::tag::TagType::Mp4Ilst;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
+
+use mp4ameta::{FreeformIdent, Tag, Userdata};
+
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -78,11 +86,76 @@ impl FileMediaSource {
     }
 
 
-    fn load_metadata(p0: String) -> MediaSourceMetadata {
+    fn load_metadata(p: String) -> MediaSourceMetadata {
         // if p0.ends_with("")
+        let path = Path::new(p.as_str());
+
+
+        if let Some(ext) = path.extension() {
+            Self::load_metadata_by_extension(p.clone(), ext.to_str().unwrap().to_string());
+        }
+
         MediaSourceMetadata::new(None, None, None, vec![])
     }
 
+    fn load_metadata_by_extension(path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
+
+        // Let's guess the format from the content just in case.
+        // This is not necessary in this case!
+        let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
+        /*
+        let tagged_file = Probe::open(path)
+            .expect("ERROR: Bad path provided!")
+            .read()
+            .expect("ERROR: Failed to read file!");
+        */
+
+        /*
+        let read_cfg = ReadConfig {
+    read_meta_items: true,
+    read_image_data: false,
+    read_chapter_list: false,
+    read_chapter_track: false,
+    read_audio_info: false,
+    chpl_timescale: ChplTimescale::DEFAULT,
+};
+let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
+         */
+        let tag = match tagged_file.primary_tag() {
+            Some(primary_tag) => primary_tag,
+            // If the "primary" tag doesn't exist, we just grab the
+            // first tag we can find. Realistically, a tag reader would likely
+            // iterate through the tags to find a suitable one.
+            None => tagged_file.first_tag().expect("ERROR: No tags found!"),
+        };
+
+        if tag.tag_type() == Mp4Ilst {
+            let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
+            let chapters = mp4tag.chapters();
+            for chapter in chapters {
+                let mins = chapter.start.as_secs() / 60;
+                let secs = chapter.start.as_secs() % 60;
+                println!("{mins:02}:{secs:02} {}", chapter.title);
+            }
+            // https://github.com/saecki/mp4ameta/issues/35
+            // tag.itunes_string("ASIN");
+            let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
+            let series = mp4tag.strings_of(&series_indent).next().unwrap_or("--NOTFOUND--");
+
+            let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
+
+
+        }
+
+        Ok(MediaSourceMetadata::new(None, None, None, vec![]))
+        /*
+        match ext.as_str() {
+            "mp4" => Self::load_mp4_metadata(path.clone()),
+            _ => MediaSourceMetadata::new(None, None, None, vec![])
+        }
+
+         */
+    }
 
 }
 
