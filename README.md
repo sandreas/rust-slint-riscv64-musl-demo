@@ -139,8 +139,10 @@ That's it for now, more to come.
 - [ ] GridLayout does not support for loops
 - [ ] Swipe Gesture Handler makes using sliders impossible #6781
 - [ ] Async is not supported #4377
-- [ ] Scrollview has a margin right, regardless of showing scrollbar or not
-
+- [ ] ScrollView has a margin right, regardless of showing scrollbar or not
+- [ ] Element sizes can not be scaled (e.g. Slider or Checkbox)
+- [ ] Something is wrong with the LCD Color, it may be the driver or slint
+- 
 
 # Notes
 - Routing: https://github.com/slint-ui/slint/discussions/6783

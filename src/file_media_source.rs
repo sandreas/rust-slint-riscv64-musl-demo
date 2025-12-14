@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
-use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType, ReadableSeeker};
+use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -58,10 +58,12 @@ impl FileMediaSource {
                 };
 
                 let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
+                let full_path = path_string[start_index..].to_string();
                 let item = MediaSourceItem {
-                    id: path_string[start_index..].to_string(), // title.clone(),
+                    id: full_path.clone(),
                     media_type,
                     title,
+                    metadata: Self::load_metadata(full_path.clone()),
                 };
                 // (item.id.clone(), item) // (key, value) for HashMap
                 item
@@ -75,9 +77,14 @@ impl FileMediaSource {
         }
     }
 
+
+    fn load_metadata(p0: String) -> MediaSourceMetadata {
+        // if p0.ends_with("")
+        MediaSourceMetadata::new(None, None, None, vec![])
+    }
+
+
 }
-
-
 
 #[async_trait]
 impl MediaSource for FileMediaSource {

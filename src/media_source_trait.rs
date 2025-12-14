@@ -1,6 +1,7 @@
 use std::io;
 use std::io::{BufReader, Read, Seek};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 // Supertrait combining both
@@ -32,7 +33,46 @@ pub struct MediaSourceItem {
     pub id: String,
     pub title: String,
     pub media_type: MediaType,
+    pub metadata: MediaSourceMetadata
 }
+
+#[derive(Debug, Clone)]
+pub struct MediaSourceMetadata {
+    // option is important here, because empty can be the real value as well as unset values, which are None
+    pub artist: Option<String>,
+    pub title: Option<String>,
+    pub album: Option<String>,
+    pub chapters: Vec<MediaSourceChapter>,
+}
+
+impl MediaSourceMetadata {
+    pub fn new(artist: Option<String>, title: Option<String>, album: Option<String>, chapters: Vec<MediaSourceChapter>) -> Self {
+        Self {
+            artist,
+            title,
+            album,
+            chapters,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MediaSourceChapter {
+    pub name: String,
+    pub start: Duration,
+    pub duration: Duration,
+}
+
+impl MediaSourceChapter {
+    pub fn new(name: String, start: Duration, duration: Duration) -> Self {
+        Self { name, start, duration }
+    }
+
+    pub fn end(&self) -> Duration {
+        self.start + self.duration
+    }
+}
+
 
 
 #[async_trait::async_trait]

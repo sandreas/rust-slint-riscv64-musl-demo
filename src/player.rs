@@ -1,5 +1,7 @@
 // https://github.com/PaulWoitaschek/Voice/blob/main/core/playback/src/main/kotlin/voice/core/playback/player/VoicePlayer.kt
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
+// load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
+
 
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
@@ -141,6 +143,7 @@ impl Player {
 
     fn try_seek(sink: &Sink, position: Duration) -> Result<(), SeekError> {
         sink.try_seek(position)
+
     }
 
     // todo:
