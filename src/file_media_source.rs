@@ -1,19 +1,18 @@
-use std::fs::File;
+use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
+use async_trait::async_trait;
+use lofty::error::LoftyError;
+use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::prelude::Accessor;
+use lofty::probe::Probe;
+use lofty::tag::TagType::Mp4Ilst;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use async_trait::async_trait;
-use lofty::error::LoftyError;
-use lofty::file::TaggedFileExt;
-use lofty::probe::Probe;
-use lofty::tag::TagType::Mp4Ilst;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
-use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 
-use mp4ameta::{FreeformIdent, Tag, Userdata};
-
+use mp4ameta::FreeformIdent;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -66,12 +65,11 @@ impl FileMediaSource {
                 };
 
                 let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
-                let full_path = path_string[start_index..].to_string();
                 let item = MediaSourceItem {
-                    id: full_path.clone(),
+                    id: rel_path.to_string(),
                     media_type,
                     title,
-                    metadata: Self::load_metadata(full_path.clone()),
+                    metadata: Self::load_metadata(path_string.clone()),
                 };
                 // (item.id.clone(), item) // (key, value) for HashMap
                 item
@@ -95,7 +93,7 @@ impl FileMediaSource {
             Self::load_metadata_by_extension(p.clone(), ext.to_str().unwrap().to_string());
         }
 
-        MediaSourceMetadata::new(None, None, None, vec![])
+        MediaSourceMetadata::new(None, None, None, None, None, None, vec![])
     }
 
     fn load_metadata_by_extension(path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
@@ -122,39 +120,75 @@ impl FileMediaSource {
 let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
          */
         let tag = match tagged_file.primary_tag() {
-            Some(primary_tag) => primary_tag,
+            Some(primary_tag) => Some(primary_tag),
             // If the "primary" tag doesn't exist, we just grab the
             // first tag we can find. Realistically, a tag reader would likely
             // iterate through the tags to find a suitable one.
-            None => tagged_file.first_tag().expect("ERROR: No tags found!"),
+            None => tagged_file.first_tag(),
         };
 
-        if tag.tag_type() == Mp4Ilst {
-            let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
-            let chapters = mp4tag.chapters();
-            for chapter in chapters {
-                let mins = chapter.start.as_secs() / 60;
-                let secs = chapter.start.as_secs() % 60;
-                println!("{mins:02}:{secs:02} {}", chapter.title);
+        let properties = tagged_file.properties();
+        let duration = properties.duration();
+
+        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
+        if let Some(tag) = tag {
+            let mut final_series : Option<String> = None;
+            let mut final_part : Option<String> = None;
+            let mut final_composer: Option<String> = None;
+            if tag.tag_type() == Mp4Ilst {
+                let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
+
+                let tmp_chaps = mp4tag.chapters().iter().rev();
+                let mut end = duration;
+                for tmp_chap in tmp_chaps {
+                let duration = end - tmp_chap.start;
+                chapters.push(MediaSourceChapter::new(tmp_chap.title.clone(), tmp_chap.start, duration));
+                end -= duration;
+                }
+                chapters.reverse();
+
+                // https://github.com/saecki/mp4ameta/issues/35
+                // tag.itunes_string("ASIN");
+                // let artist_ident = Fourcc(*b"\xa9mvmt");
+                // mp4tag.movement()
+
+                let movement = mp4tag.movement();
+                let movement_index = mp4tag.movement_index();
+                let final_composer = mp4tag.composer();
+
+                // mp4tag.artist_sort_order()
+                let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
+                let series = mp4tag.strings_of(&series_indent).next();
+                let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
+                let part = mp4tag.strings_of(&part_indent).next();
+
+                // let series_part = format!("{} {}", series, part);
+
+                if series.is_some() {
+                    final_series = series.map(|s| s.to_string());
+                } else if movement.is_some() {
+                    final_series = movement.map(|s| s.to_string());
+                }
+
+                if part.is_some() {
+                    final_part = part.map(|s| s.to_string());
+                } else if movement_index.is_some() {
+                    final_part = movement_index.map(|s| s.to_string());
+                }
+
             }
-            // https://github.com/saecki/mp4ameta/issues/35
-            // tag.itunes_string("ASIN");
-            let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
-            let series = mp4tag.strings_of(&series_indent).next().unwrap_or("--NOTFOUND--");
 
-            let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
-
-
+            return Ok(MediaSourceMetadata::new(
+                tag.artist().map(|s| s.to_string()),
+                tag.title().map(|s| s.to_string()),
+                tag.album().map(|s| s.to_string()),
+                final_composer,
+                final_series,
+                final_part,
+                chapters))
         }
 
-        Ok(MediaSourceMetadata::new(None, None, None, vec![]))
-        /*
-        match ext.as_str() {
-            "mp4" => Self::load_mp4_metadata(path.clone()),
-            _ => MediaSourceMetadata::new(None, None, None, vec![])
-        }
-
-         */
+        Ok(MediaSourceMetadata::new(None, None, None, None, None, None,vec![]))
     }
 
 }

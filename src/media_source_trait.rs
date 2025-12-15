@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
+
 // Supertrait combining both
 pub trait ReadableSeeker: Read + Seek {}
 impl<T: Read + Seek> ReadableSeeker for T {}
@@ -42,15 +43,27 @@ pub struct MediaSourceMetadata {
     pub artist: Option<String>,
     pub title: Option<String>,
     pub album: Option<String>,
+    pub composer: Option<String>,
+    pub series: Option<String>,
+    pub part: Option<String>,
     pub chapters: Vec<MediaSourceChapter>,
 }
 
 impl MediaSourceMetadata {
-    pub fn new(artist: Option<String>, title: Option<String>, album: Option<String>, chapters: Vec<MediaSourceChapter>) -> Self {
+    pub fn new(artist: Option<String>,
+               title: Option<String>,
+               album: Option<String>,
+               composer: Option<String>,
+               series: Option<String>,
+               part: Option<String>,
+               chapters: Vec<MediaSourceChapter>) -> Self {
         Self {
             artist,
             title,
             album,
+            composer,
+            series,
+            part,
             chapters,
         }
     }
