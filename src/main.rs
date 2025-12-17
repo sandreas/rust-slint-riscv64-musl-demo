@@ -26,9 +26,11 @@ use std::rc::Rc;
 use std::sync::Arc;
 use evdev::Device;
 use sea_orm::{Database, DatabaseConnection, DbConn, DbErr};
+use sea_orm_migration::MigratorTrait;
 use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
+use crate::migrator::Migrator;
 
 slint::include_modules!();
 
@@ -39,7 +41,7 @@ const DB_URL: &str = "";
 
 async fn connect_db(db_url: &str) -> Result<DatabaseConnection, DbErr> {
     let db = Database::connect(db_url).await?;
-
+    Migrator::up(&db, None).await?;
     Ok(db)
 }
 #[tokio::main]
@@ -71,13 +73,13 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
     let db_url = format!("sqlite://{}/player.db?mode=rwc", base_dir.clone().trim_end_matches("/"));
+    let connect_result = connect_db(&db_url).await;
+    if(connect_result.is_err()) {
+        return Err(slint::PlatformError::Other(format!("Could not find, create or migrate database: {}", connect_result.err().unwrap())));
+    }
 
-    let db_result = connect_db(&db_url).await;
-        if(db_result.is_err()) {
-            return Err(slint::PlatformError::Other("Could not open database".to_string()));
-        }
+    let db = connect_result.unwrap();
 
-        let db = db_result.unwrap();
     /*
         // Connecting SQLite
         // Setup database schema

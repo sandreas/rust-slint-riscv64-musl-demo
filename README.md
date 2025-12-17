@@ -169,6 +169,12 @@ This is a good overview of existing audio tags: https://docs.mp3tag.de/mapping/
 
 > Note: There is no "DATE" type. It can be stored as a TEXT (iso date format), INTEGER (timestamp) or REAL (Julian Day Number). For more details see https://sqlite.org/lang_datefunc.html
 
+## Enum columns
+See https://www.sea-ql.org/sea-orm-cookbook/005-selct-row-matching-any-enum-values.html
+
+## Raw sql
+See https://www.sea-ql.org/sea-orm-cookbook/018-raw-and-unprepared.html:q
+
 ## Schema (draft)
 - Items - list of all files in the file system
   - id (int)
