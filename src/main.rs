@@ -9,6 +9,8 @@ mod gpio_button_service;
 mod file_media_source;
 mod media_source_trait;
 mod migrator;
+mod entity;
+mod settings_manager;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -27,10 +29,12 @@ use std::sync::Arc;
 use evdev::Device;
 use sea_orm::{Database, DatabaseConnection, DbConn, DbErr};
 use sea_orm_migration::MigratorTrait;
+use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, picture, setting};
 use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 use crate::migrator::Migrator;
+use crate::settings_manager::SettingsManager;
 
 slint::include_modules!();
 
@@ -39,19 +43,34 @@ const DB_URL: &str = "";
 
 
 
-async fn connect_db(db_url: &str) -> Result<DatabaseConnection, DbErr> {
+async fn connect_db(db_url: &str, skip_migrate: bool) -> Result<DatabaseConnection, DbErr> {
     let db = Database::connect(db_url).await?;
-    Migrator::up(&db, None).await?;
+    // todo: dirty hack to prevent startup failure if db exists
+    // this has to be solved with migrations or at least better than this
+    if ! skip_migrate {
+
+        db.get_schema_builder()
+            .register(item::Entity)
+            .register(items_metadata::Entity)
+            .register(items_json_metadata::Entity)
+            .register(picture::Entity)
+            .register(items_pictures::Entity)
+            .register(setting::Entity)
+            .apply(&db)
+            .await?;
+
+        Migrator::up(&db, None).await?;
+    }
     Ok(db)
 }
+
+
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
         .init();
-
-
 
     let args = Args::parse();
     let base_dir = args.base_directory.clone();
@@ -72,14 +91,16 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
 
-    let db_url = format!("sqlite://{}/player.db?mode=rwc", base_dir.clone().trim_end_matches("/"));
-    let connect_result = connect_db(&db_url).await;
+    let db_path = format!("{}/{}", base_dir.clone().trim_end_matches("/"), String::from("player.db"));
+    let skip_migrate = Path::new(&db_path).exists();
+    let db_url = format!("sqlite://{}?mode=rwc", db_path);
+    let connect_result = connect_db(&db_url, skip_migrate).await;
     if(connect_result.is_err()) {
         return Err(slint::PlatformError::Other(format!("Could not find, create or migrate database: {}", connect_result.err().unwrap())));
     }
 
     let db = connect_result.unwrap();
-
+    let settings_manager = SettingsManager::new(db.clone());
     /*
         // Connecting SQLite
         // Setup database schema
@@ -87,8 +108,10 @@ async fn main() -> Result<(), slint::PlatformError> {
     */
 
 
+    let display_brightness = settings_manager.get("display.brightness", 1000).await;
+    let dark_mode = settings_manager.get("appearance.dark_mode", true);
 
-    let file_source = FileMediaSource::new(args.base_directory);
+    let file_source = FileMediaSource::new(db.clone(), args.base_directory);
     let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
     let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
 
@@ -153,23 +176,14 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
 
     let slint_preferences = slint_app_window.global::<SlintPreferences>();
+    // load_preferences(&slint_preferences);
+
+    // slint_preferences.set_brightness(100f32);
+
+
     let preferences_ui = slint_app_window.clone_strong();
     slint_preferences.on_sync(move || {
-        let pref = preferences_ui.global::<SlintPreferences>();
-        
-        let brightness = pref.get_brightness();
-        let brightness_target_value = (brightness * 2500f32).round() as i32;
-        let path = Path::new("/sys/class/pwm/pwmchip8/pwm2/duty_cycle");
-        if path.exists() {
-
-            let mut file = OpenOptions::new()
-                .write(true) // <--------- this
-                .open(path).ok().unwrap();
-            let _ = write!(file, "{}", brightness_target_value);
-        }
-        println!("brightness: {}", brightness_target_value);
-        
-        println!("color-scheme: {}", pref.get_color_scheme());
+        sync_preferences(preferences_ui.global::<SlintPreferences>());
     });
 
     let navigation = slint_app_window.global::<SlintNavigation>();
@@ -268,6 +282,37 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     slint_app_window.run()
 }
+
+fn load_preferences(pref: SlintPreferences) {
+    todo!()
+}
+
+fn brightness_percent_to_target_value(brightness_percent: f32) -> i32{
+    (brightness_percent * 2500f32).round() as i32
+}
+
+fn update_brightness(brightness_target_value: i32) {
+    let path = Path::new("/sys/class/pwm/pwmchip8/pwm2/duty_cycle");
+    if path.exists() {
+        let mut file = OpenOptions::new()
+            .write(true) // <--------- this
+            .open(path).ok().unwrap();
+        let _ = write!(file, "{}", brightness_target_value);
+
+    }
+}
+
+fn sync_preferences(pref: SlintPreferences) {
+    let new_brightness = pref.get_brightness();
+    let brightness_target_value = brightness_percent_to_target_value(new_brightness);
+    update_brightness(brightness_target_value);
+
+    println!("brightness: {}", brightness_target_value);
+
+    // dark / light
+    println!("color-scheme: {}", pref.get_color_scheme());
+}
+
 fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
     // Create VecModel directly
     let model = VecModel::<SlintMediaSourceItem>::from(
@@ -284,6 +329,8 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
     // Explicitly wrap in ModelRc if needed (usually not)
     ModelRc::from(Rc::new(model))
 }
+
+
 
 fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
     match media_type {

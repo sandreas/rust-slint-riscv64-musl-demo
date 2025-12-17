@@ -130,6 +130,25 @@ That's it for now, more to come.
   - [ ] Test MAX17043 I2C connection and readout
   - [ ] Test Headphone-remote controls
 - [ ] Implement the DAP software for the embedded device
+  - Next Steps
+    - [ ] Store media items to database
+    - [ ] Improve display of media items
+    - [ ] Load preferences on app start
+    - [ ] Sync preferences to DB when changed
+    - [ ] Extend schema to store media-progress for items > 15 minutes
+      - Idea: 
+        - Play-Action checks last update for media-progress
+        - a new playback session id is generated if
+          - Last update is older than 30 minutes
+          - Another item has been played
+        - otherwise playback session is "resumed" and does not store a new history / media-progress item, but updates the current one
+        - Table: Playback_history
+          - id (int)
+          - item_id (int)
+          - session_id(string) // randomly generated
+          - date_modified(DateTime)
+          - position (float)
+    - [ ] Fix DB Migration issue
 - [ ] Implement the Sync software for the Desktop / Mobile devices
 
 
@@ -176,6 +195,7 @@ See https://www.sea-ql.org/sea-orm-cookbook/005-selct-row-matching-any-enum-valu
 See https://www.sea-ql.org/sea-orm-cookbook/018-raw-and-unprepared.html:q
 
 ## Schema (draft)
+
 - Items - list of all files in the file system
   - id (int)
   - media_type (int)
@@ -206,8 +226,7 @@ See https://www.sea-ql.org/sea-orm-cookbook/018-raw-and-unprepared.html:q
   - action (string)
   - position (real?)
   - modified (string)
-- Settings - store all settings (e.g. key=appearance.enable_dark_mode, type=SettingType.Boolean, value=true)
+- Settings - store all settings (e.g. key=appearance.enable_dark_mode, value=true)
   - id (int)
   - key (string)
-  - type (int)
   - value (string)

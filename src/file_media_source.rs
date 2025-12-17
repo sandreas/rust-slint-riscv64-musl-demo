@@ -14,6 +14,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
+use sea_orm::DatabaseConnection;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -21,13 +22,14 @@ pub struct FileMediaSource {
 }
 
 struct FileMediaSourceState {
+    pub db: DatabaseConnection,
     pub base_path: String,
     pub cache_path: String,
     pub items: Vec<MediaSourceItem>,
 }
 
 impl FileMediaSource {
-    pub fn new(base_path: String) -> Self {
+    pub fn new(db: DatabaseConnection, base_path: String) -> Self {
         let audio_extensions = vec!("mp3", "m4b");
         let cache_path = format!("{}/cache/", base_path.trim_end_matches('/').to_string());
 
@@ -80,6 +82,7 @@ impl FileMediaSource {
 
         Self {
             state: Arc::new(Mutex::new(FileMediaSourceState {
+                db,
                 base_path,
                 cache_path,
                 items
