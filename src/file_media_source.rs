@@ -1,3 +1,4 @@
+use std::any::Any;
 use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 use async_trait::async_trait;
 use lofty::error::LoftyError;
@@ -12,7 +13,7 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
-use mp4ameta::FreeformIdent;
+use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -21,17 +22,20 @@ pub struct FileMediaSource {
 
 struct FileMediaSourceState {
     pub base_path: String,
+    pub cache_path: String,
     pub items: Vec<MediaSourceItem>,
 }
 
 impl FileMediaSource {
     pub fn new(base_path: String) -> Self {
         let audio_extensions = vec!("mp3", "m4b");
+        let cache_path = format!("{}/cache/", base_path.trim_end_matches('/').to_string());
+
 
         // let music_dir = PathBuf::from(&self.base_path).join("music");
         // let audiobook_dir = PathBuf::from(&self.base_path).join("audiobooks");
 
-        let audio_files = WalkDir::new(&base_path)
+        let items = WalkDir::new(&base_path)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| {
@@ -50,11 +54,9 @@ impl FileMediaSource {
 
             })
             .map(|e| {
-                let path = e.path();
-                let path_string = path.to_str().unwrap().to_string();
+                let full_path = e.path().to_str().unwrap().to_string();
                 let start_index = base_path.len();
-                let rel_path = &path_string[start_index..];
-                let file_name = path.file_name().unwrap().to_string_lossy().into_owned();
+                let rel_path = &full_path[start_index..];
                 let media_type = if rel_path.starts_with("/music/") {
                     MediaType::Music
                 }
@@ -65,11 +67,12 @@ impl FileMediaSource {
                 };
 
                 let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
+                let metadata = Self::load_metadata(cache_path.clone(), full_path.clone());
                 let item = MediaSourceItem {
                     id: rel_path.to_string(),
                     media_type,
                     title,
-                    metadata: Self::load_metadata(path_string.clone()),
+                    metadata,
                 };
                 // (item.id.clone(), item) // (key, value) for HashMap
                 item
@@ -78,28 +81,42 @@ impl FileMediaSource {
         Self {
             state: Arc::new(Mutex::new(FileMediaSourceState {
                 base_path,
-                items: audio_files
+                cache_path,
+                items
             })),
         }
     }
 
 
-    fn load_metadata(p: String) -> MediaSourceMetadata {
+    fn load_metadata(cache_path: String, p: String) -> MediaSourceMetadata {
         // if p0.ends_with("")
         let path = Path::new(p.as_str());
 
 
         if let Some(ext) = path.extension() {
-            Self::load_metadata_by_extension(p.clone(), ext.to_str().unwrap().to_string());
+            Self::load_metadata_by_extension(cache_path.clone(), p.clone(), ext.to_str().unwrap().to_string());
         }
 
         MediaSourceMetadata::new(None, None, None, None, None, None, vec![])
     }
 
-    fn load_metadata_by_extension(path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
+    fn load_metadata_by_extension(cache_path: String, path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
+        /*
+        Idea for covers:
+        - Softlink files to a hashed central file (see https://doc.rust-lang.org/std/fs/fn.soft_link.html)
+        - Alternatively: Create a filename with the hash in the filename
+        - create softlink in cache for relative path linking to the real cache file
+            - Audio file: ./media/audiobooks/Harry Potter.m4b
+            - Softlink Big (500x500px): ./cache/audiobooks/Harry Potter.m4b.cover.jpg
+            - Softlink Listing (25%-33% of 368px => 92-128px): ./cache/audiobooks/Harry Potter.m4b.listing.jpg
+            - audio file hash marker: ./cache/audiobooks/Harry Potter.m4b.<a-fast-hash-over-the-content>
+            - Real files:
+                - ./cache/images/<a-fast-hash-over-the-content>.cover.jpg
+                - ./cache/images/<a-fast-hash-over-the-content>.tb.jpg
 
-        // Let's guess the format from the content just in case.
-        // This is not necessary in this case!
+         */
+
+
         let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
         /*
         let tagged_file = Probe::open(path)
@@ -131,12 +148,25 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         let duration = properties.duration();
 
         let mut chapters: Vec<MediaSourceChapter> = Vec::new();
+
         if let Some(tag) = tag {
+            let mut tag_cover = if tag.picture_count() > 0 {
+                Some(tag.pictures().first().unwrap().data())
+            } else {
+                None
+            };
+
             let mut final_series : Option<String> = None;
             let mut final_part : Option<String> = None;
             let mut final_composer: Option<String> = None;
             if tag.tag_type() == Mp4Ilst {
                 let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
+                let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
+                tag_cover = if mp4images.len() > 0 {
+                    Some(mp4images.first().unwrap().1.data)
+                } else {
+                    None
+                };
 
                 let tmp_chaps = mp4tag.chapters().iter().rev();
                 let mut end = duration;
@@ -178,10 +208,14 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
             }
 
+
+
+
             return Ok(MediaSourceMetadata::new(
                 tag.artist().map(|s| s.to_string()),
                 tag.title().map(|s| s.to_string()),
                 tag.album().map(|s| s.to_string()),
+
                 final_composer,
                 final_series,
                 final_part,

@@ -56,6 +56,7 @@ impl MediaSourceMetadata {
                composer: Option<String>,
                series: Option<String>,
                part: Option<String>,
+
                chapters: Vec<MediaSourceChapter>) -> Self {
         Self {
             artist,

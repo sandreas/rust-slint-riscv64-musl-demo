@@ -148,3 +148,60 @@ That's it for now, more to come.
 - Routing: https://github.com/slint-ui/slint/discussions/6783
 - Swipe: https://docs.slint.dev/latest/docs/slint/reference/gestures/swipegesturehandler/
 - Rust mutable struct fields: https://stackoverflow.com/questions/27022848/how-i-can-mutate-a-structs-field-from-a-method
+
+
+# Tags
+
+This is a good overview of existing audio tags: https://docs.mp3tag.de/mapping/
+
+
+
+# SQL Database
+
+
+## Datatypes
+
+- NULL. The value is a NULL value.
+- INTEGER. The value is a signed integer, stored in 0, 1, 2, 3, 4, 6, or 8 bytes depending on the magnitude of the value.
+- REAL. The value is a floating point value, stored as an 8-byte IEEE floating point number.
+- TEXT. The value is a text string, stored using the database encoding (UTF-8, UTF-16BE or UTF-16LE).
+- BLOB. The value is a blob of data, stored exactly as it was input.
+
+> Note: There is no "DATE" type. It can be stored as a TEXT (iso date format), INTEGER (timestamp) or REAL (Julian Day Number). For more details see https://sqlite.org/lang_datefunc.html
+
+## Schema (draft)
+- Items - list of all files in the file system
+  - id (int)
+  - media_type (int)
+  - name (string)
+  - modified (string)
+- ItemsMetadata - audio metadata assigned to items
+  - id (int)
+  - item_id (int)
+  - tag (int)
+  - value (string)
+  - modified (string)
+- ItemJsonMetadata - audio metadata containing non-searchable long text / json (e.g. chapters)
+  - id (int)
+  - item_id (int)
+  - tag (int)
+  - value (text)
+  - modified (string)
+- Pictures - references to pictures stored in the filesytsem (<base-dir>/.cache/)
+  - id (int)
+  - file_location (string)
+  - hash (string)
+  - modified (string)
+- ItemPictures - m to n references for pictures stored in files
+  - item_id (int)
+  - picture_id (int)
+- Log - action log for files (e.g. play, pause, sleeptimer, etc) - will probably also store the current position and the playback history
+  - id (int)
+  - action (string)
+  - position (real?)
+  - modified (string)
+- Settings - store all settings (e.g. key=appearance.enable_dark_mode, type=SettingType.Boolean, value=true)
+  - id (int)
+  - key (string)
+  - type (int)
+  - value (string)

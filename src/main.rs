@@ -8,6 +8,7 @@ mod headset;
 mod gpio_button_service;
 mod file_media_source;
 mod media_source_trait;
+mod migrator;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -24,6 +25,7 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use evdev::Device;
+use sea_orm::{Database, DatabaseConnection, DbConn, DbErr};
 use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
@@ -31,12 +33,28 @@ use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEven
 slint::include_modules!();
 
 
+const DB_URL: &str = "";
+
+
+
+async fn connect_db(db_url: &str) -> Result<DatabaseConnection, DbErr> {
+    let db = Database::connect(db_url).await?;
+
+    Ok(db)
+}
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_test_writer()
+        .init();
+
+
 
     let args = Args::parse();
-    println!("base directory is: {}", args.base_directory);
-    let base_path = Path::new(&args.base_directory);
+    let base_dir = args.base_directory.clone();
+    println!("base directory is: {}", base_dir.clone());
+    let base_path = Path::new(&base_dir);
     if !Path::exists(base_path) {
         match std::env::current_dir() {
             Ok(cwd) => {
@@ -51,6 +69,20 @@ async fn main() -> Result<(), slint::PlatformError> {
     }
 
 
+
+    let db_url = format!("sqlite://{}/player.db?mode=rwc", base_dir.clone().trim_end_matches("/"));
+
+    let db_result = connect_db(&db_url).await;
+        if(db_result.is_err()) {
+            return Err(slint::PlatformError::Other("Could not open database".to_string()));
+        }
+
+        let db = db_result.unwrap();
+    /*
+        // Connecting SQLite
+        // Setup database schema
+        setup_schema(&db).await?;
+    */
 
 
 
@@ -266,4 +298,28 @@ fn convert_int_to_media_type(media_type: i32) -> MediaType {
         4 => MediaType::Music,
         _ => MediaType::Unspecified,
     }
+}
+
+
+async fn setup_schema(db: &DbConn) -> Result<(), String> {
+/*
+    // it doesn't matter which order you register entities.
+    // SeaORM figures out the foreign key dependencies and
+    // creates the tables in the right order along with foreign keys
+    db.get_schema_builder()
+        .register(cake::Entity)
+        .register(cake_filling::Entity)
+        .register(filling::Entity)
+        .apply(db)
+        .await?;
+
+    // or, write DDL manually
+    db.execute(
+        Table::create()
+            .table(cake::Entity)
+            .col(pk_auto(cake::Column::Id))
+            .col(string(cake::Column::Name))
+    ).await?;
+*/
+    Ok(())
 }
