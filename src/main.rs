@@ -29,7 +29,7 @@ use std::sync::Arc;
 use evdev::Device;
 use sea_orm::{Database, DatabaseConnection, DbConn, DbErr};
 use sea_orm_migration::MigratorTrait;
-use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, picture, setting};
+use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, items_progress, picture, setting};
 use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
@@ -43,12 +43,11 @@ const DB_URL: &str = "";
 
 
 
-async fn connect_db(db_url: &str, skip_migrate: bool) -> Result<DatabaseConnection, DbErr> {
+async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection, DbErr> {
     let db = Database::connect(db_url).await?;
     // todo: dirty hack to prevent startup failure if db exists
     // this has to be solved with migrations or at least better than this
-    if ! skip_migrate {
-
+    if first_run {
         db.get_schema_builder()
             .register(item::Entity)
             .register(items_metadata::Entity)
@@ -56,11 +55,12 @@ async fn connect_db(db_url: &str, skip_migrate: bool) -> Result<DatabaseConnecti
             .register(picture::Entity)
             .register(items_pictures::Entity)
             .register(setting::Entity)
+            .register(items_progress::Entity)
             .apply(&db)
             .await?;
 
-        Migrator::up(&db, None).await?;
     }
+    Migrator::up(&db, None).await?;
     Ok(db)
 }
 

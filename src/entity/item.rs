@@ -37,6 +37,10 @@ pub enum Relation {
 
     #[sea_orm(has_many = "crate::entity::items_pictures::Entity")]
     ItemsPictures,
+
+    #[sea_orm(has_many = "crate::entity::items_progress::Entity")]
+    ItemsProgress,
 }
+
 
 impl ActiveModelBehavior for ActiveModel {}
