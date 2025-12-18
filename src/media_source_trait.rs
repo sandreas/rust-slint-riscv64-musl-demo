@@ -2,6 +2,7 @@ use std::io;
 use std::io::{BufReader, Read, Seek};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use sea_orm::{DeriveActiveEnum, EnumIter};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 
@@ -22,10 +23,14 @@ pub enum MediaSourceEvent {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum MediaType {
+    #[sea_orm(num_value = 0)]
     Unspecified,
+    #[sea_orm(num_value = 2)]
     Audiobook,
+    #[sea_orm(num_value = 4)]
     Music,
 }
 

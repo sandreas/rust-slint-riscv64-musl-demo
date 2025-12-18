@@ -92,20 +92,15 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
     let db_path = format!("{}/{}", base_dir.clone().trim_end_matches("/"), String::from("player.db"));
-    let skip_migrate = Path::new(&db_path).exists();
+    let first_run = !Path::new(&db_path).exists();
     let db_url = format!("sqlite://{}?mode=rwc", db_path);
-    let connect_result = connect_db(&db_url, skip_migrate).await;
+    let connect_result = connect_db(&db_url, first_run).await;
     if(connect_result.is_err()) {
         return Err(slint::PlatformError::Other(format!("Could not find, create or migrate database: {}", connect_result.err().unwrap())));
     }
 
     let db = connect_result.unwrap();
     let settings_manager = SettingsManager::new(db.clone());
-    /*
-        // Connecting SQLite
-        // Setup database schema
-        setup_schema(&db).await?;
-    */
 
 
     let display_brightness = settings_manager.get("display.brightness", 1000).await;
@@ -347,28 +342,4 @@ fn convert_int_to_media_type(media_type: i32) -> MediaType {
         4 => MediaType::Music,
         _ => MediaType::Unspecified,
     }
-}
-
-
-async fn setup_schema(db: &DbConn) -> Result<(), String> {
-/*
-    // it doesn't matter which order you register entities.
-    // SeaORM figures out the foreign key dependencies and
-    // creates the tables in the right order along with foreign keys
-    db.get_schema_builder()
-        .register(cake::Entity)
-        .register(cake_filling::Entity)
-        .register(filling::Entity)
-        .apply(db)
-        .await?;
-
-    // or, write DDL manually
-    db.execute(
-        Table::create()
-            .table(cake::Entity)
-            .col(pk_auto(cake::Column::Id))
-            .col(string(cake::Column::Name))
-    ).await?;
-*/
-    Ok(())
 }

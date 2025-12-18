@@ -7,11 +7,11 @@ use chrono::NaiveDateTime;
 #[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum MediaType {
     #[sea_orm(num_value = 0)]
-    Audio,
-    #[sea_orm(num_value = 1)]
-    Video,
+    Unspecified,
     #[sea_orm(num_value = 2)]
-    Image,
+    Audiobook,
+    #[sea_orm(num_value = 4)]
+    Music,
 }
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -20,7 +20,11 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
 
+    pub file_id: String,
+
     pub media_type: MediaType,
+
+    pub location: String,
 
     pub name: String,
 
