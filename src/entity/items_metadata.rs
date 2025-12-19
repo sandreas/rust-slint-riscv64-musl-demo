@@ -1,5 +1,4 @@
 use sea_orm::entity::prelude::*;
-use sea_orm::ActiveEnum;
 use chrono::NaiveDateTime;
 
 // TagField enum stored as INTEGER
@@ -17,7 +16,8 @@ pub enum TagField {
     // extend as needed
 }
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm::model]
+#[derive(DeriveEntityModel, Clone, Debug, PartialEq)]
 #[sea_orm(table_name = "items_metadata")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -31,22 +31,10 @@ pub struct Model {
     pub value: String,
 
     pub date_modified: NaiveDateTime,
-}
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(
-        belongs_to = "super::item::Entity",
-        from = "Column::ItemId",
-        to = "super::item::Column::Id"
-    )]
-    Item,
-}
+    #[sea_orm(belongs_to, from = "item_id", to = "id")]
+    pub item: HasOne<super::item::Entity>,
 
-impl Related<super::item::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Item.def()
-    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

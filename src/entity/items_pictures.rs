@@ -1,42 +1,17 @@
-// src/entity/items_pictures.rs
-use sea_orm::entity::prelude::*;
+use sea_orm::{ActiveModelBehavior, DeriveEntityModel};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm::model]
+#[derive(DeriveEntityModel, Clone, Debug, PartialEq)]
 #[sea_orm(table_name = "items_pictures")]
 pub struct Model {
-    #[sea_orm(primary_key)]
-    pub id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub item_id: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub picture_id: i32,
+    #[sea_orm(belongs_to, from = "item_id", to = "id")]
+    pub item: Option<super::cake::Entity>,
+    #[sea_orm(belongs_to, from = "picture_id", to = "id")]
+    pub picture: Option<super::filling::Entity>,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(
-        belongs_to = "crate::entity::item::Entity",
-        from = "Column::ItemId",
-        to = "crate::entity::item::Column::Id"
-    )]
-    Item,
-
-    #[sea_orm(
-        belongs_to = "crate::entity::picture::Entity",
-        from = "Column::PictureId",
-        to = "crate::entity::picture::Column::Id"
-    )]
-    Picture,
-}
-
-impl Related<crate::entity::item::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Item.def()
-    }
-}
-
-impl Related<crate::entity::picture::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Picture.def()
-    }
-}
-
-impl ActiveModelBehavior for ActiveModel {}
+impl ActiveModelBehavior for crate::entity::picture::ActiveModel {}

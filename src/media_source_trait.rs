@@ -23,15 +23,11 @@ pub enum MediaSourceEvent {
 }
 
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "i32", db_type = "Integer")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MediaType {
-    #[sea_orm(num_value = 0)]
-    Unspecified,
-    #[sea_orm(num_value = 2)]
-    Audiobook,
-    #[sea_orm(num_value = 4)]
-    Music,
+    Unspecified = 0,
+    Audiobook = 2,
+    Music = 4,
 }
 
 #[derive(Debug, Clone)]

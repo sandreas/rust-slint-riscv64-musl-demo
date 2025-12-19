@@ -1,6 +1,4 @@
 use crate::item;
-use std::any::Any;
-use std::ffi::OsStr;
 use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 use async_trait::async_trait;
 use lofty::error::LoftyError;
@@ -8,6 +6,7 @@ use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::prelude::Accessor;
 use lofty::probe::Probe;
 use lofty::tag::TagType::Mp4Ilst;
+use std::ffi::OsStr;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -15,12 +14,13 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
-use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::{entity, DatabaseConnection, EntityTrait, IntoActiveValue, Set, QueryFilter, ColumnTrait, DbErr, IntoActiveModel, TryIntoModel};
-use sea_orm::sea_query::OnConflict;
-use tracing_subscriber::layer::SubscriberExt;
 use crate::entity::items_metadata;
 use crate::entity::items_metadata::TagField;
+use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
+use sea_orm::sea_query::OnConflict;
+use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, LoaderTrait, ModelTrait, QueryFilter, RelationTrait, Set, TryIntoModel};
+use tracing_subscriber::layer::SubscriberExt;
+
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -511,3 +511,51 @@ async fn bulk_upsert(db: &DatabaseConnection) {
 }
 
  */
+
+
+
+// does not work, somehow the trait is not satisfied
+async fn get_item_with_metadata(
+    db: &DatabaseConnection,
+    item_id: i32
+) -> Result<Option<(item::Model, Vec<items_metadata::Model>)>, sea_orm::DbErr> {
+    let item_with_meta = item::Entity::find()
+        .filter(item::Column::Id.eq(item_id))
+        .with(item::Relation::ItemsMetadata)  // Eager load has_many relation
+        .one(db)
+        .await?;
+
+    Ok(item_with_meta.map(|model_ex| {
+        let item = model_ex.model;
+        let metadata = model_ex.related.clone().unwrap_or_default();
+        (item, metadata)
+    }))
+}
+
+
+/*
+async fn get_item_with_metadata(
+    db: &DatabaseConnection,
+    item_id: i32
+) -> Result<Option<(item::Model, Vec<items_metadata::Model>)>, sea_orm::DbErr> {
+    // Fetch base item first
+    let item = item::Entity::find()
+        .filter(item::Column::Id.eq(item_id))
+        .one(db)
+        .await?;
+
+    let (item, metadata) = match item {
+        Some(item) => {
+            // Load related metadata (has_many)
+
+            let metadata = item.find_related(items_metadata::Entity)
+                .all(db)
+                .await?;
+            (Some(item), metadata)
+        }
+        None => (None, vec![]),
+    };
+
+    Ok(item.map(|i| (i, metadata)))
+}
+*/

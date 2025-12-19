@@ -1,6 +1,7 @@
 use sea_orm::entity::prelude::*;
 use chrono::NaiveDateTime;
 
+#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "pictures")]
 pub struct Model {
@@ -9,15 +10,13 @@ pub struct Model {
 
     pub location: String,  // file path or URL
 
-    pub hash: String,      // unique image hash for deduplication
+    pub hash: String, // unique image hash for deduplication
 
     pub date_modified: NaiveDateTime,
-}
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(has_many = "super::items_pictures::Entity")]
-    ItemsPictures,
+    #[sea_orm(has_many, via = "items_pictures")]
+    pub items: HasMany<super::items::Entity>,
+
 }
 
 impl ActiveModelBehavior for ActiveModel {}
