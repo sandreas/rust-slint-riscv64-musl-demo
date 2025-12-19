@@ -1,5 +1,5 @@
+use chrono::Utc;
 use sea_orm::entity::prelude::*;
-use chrono::NaiveDateTime;
 
 // TagField enum stored as INTEGER
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
@@ -29,7 +29,7 @@ pub struct Model {
 
     pub value: String,
 
-    pub date_modified: NaiveDateTime,
+    pub date_modified: chrono::DateTime<Utc>,
 
     #[sea_orm(belongs_to, from = "item_id", to = "id")]
     pub item: HasOne<super::item::Entity>,

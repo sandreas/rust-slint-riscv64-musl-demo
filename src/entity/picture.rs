@@ -1,5 +1,5 @@
+use chrono::Utc;
 use sea_orm::entity::prelude::*;
-use chrono::NaiveDateTime;
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -12,7 +12,7 @@ pub struct Model {
 
     pub hash: String, // unique image hash for deduplication
 
-    pub date_modified: NaiveDateTime,
+    pub date_modified: chrono::DateTime<Utc>,
 
     #[sea_orm(has_many, via = "items_pictures")]
     pub items: HasMany<super::item::Entity>,

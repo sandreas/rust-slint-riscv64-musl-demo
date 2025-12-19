@@ -1,7 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-use chrono::{NaiveDateTime};
-
+use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum MediaType {
@@ -30,7 +29,7 @@ pub struct Model {
     // all items that do not have this updated key get
     pub last_scan_random_key: String,
     
-    pub date_modified: NaiveDateTime,
+    pub date_modified: DateTime<Utc>,
     
     #[sea_orm(has_many)]
     pub metadata: HasMany<super::items_metadata::Entity>,

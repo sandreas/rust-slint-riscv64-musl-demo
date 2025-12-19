@@ -1,5 +1,5 @@
+use chrono::Utc;
 use sea_orm::entity::prelude::*;
-use chrono::{NaiveDateTime, NaiveTime};
 
 
 #[sea_orm::model]
@@ -15,9 +15,9 @@ pub struct Model {
     pub session_key: String,
 
     // playback position in seconds, percentage, etc.
-    pub position: NaiveTime,
+    pub position: Time,
 
-    pub date_modified: NaiveDateTime,
+    pub date_modified: chrono::DateTime<Utc>,
 
     #[sea_orm(belongs_to, from = "item_id", to = "id")]
     pub item: HasOne<super::item::Entity>,

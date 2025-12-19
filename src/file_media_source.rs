@@ -1,15 +1,17 @@
+use lofty::tag::Accessor;
+use std::ffi::OsStr;
 use crate::item;
 use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 use async_trait::async_trait;
 use lofty::error::LoftyError;
 use lofty::file::{AudioFile, TaggedFileExt};
-use lofty::prelude::Accessor;
 use lofty::probe::Probe;
 use lofty::tag::TagType::Mp4Ilst;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use chrono::{DateTime, Local, NaiveDateTime};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
@@ -107,7 +109,7 @@ impl FileMediaSource {
         cache_path
     }
 
-    async fn scan_media(&self) {
+    pub async fn scan_media(&self) {
         let audio_extensions = vec!("mp3", "m4b");
         let inner = self.state.lock().unwrap();
         let base_path = inner.base_path.clone();
@@ -153,7 +155,6 @@ impl FileMediaSource {
             // file.set_modified(SystemTime::now()).unwrap();
 
 
-/*
             let file_id = file_id::get_file_id(full_path.clone()).unwrap();
             let file_id_str = format!("{:?}", file_id);
 
@@ -163,22 +164,38 @@ impl FileMediaSource {
                 .and_then(OsStr::to_str)
                 .map(|s| s.to_owned()).unwrap(); // Option<String>
 
-            let up_item = upsert_item(&db,
-                                      file_name_without_ext,
-                                      file_id_str,
-                                      media_type,
-                                      rel_path.clone()).await;
+            let file_date_modified = audio_file.path().metadata().unwrap().modified().unwrap();
 
-            let metadata_entries = upsert_metadata(&db, full_path);
 
-            let metadata = items_metadata::ActiveModel {
-                item_id: Set(up_item.unwrap().unwrap().id),
-                tag_field: Set(TagField::Album),
-                value: Set("Album".to_owned()),
-                date_modified: Default::default(),
-                ..Default::default()  // Unset fields like id
-            };
-*/
+            let file_date_mod_compare: DateTime<Local> = DateTime::from(file_date_modified);
+
+                        let item_result = item::Entity::find()
+                            .filter(item::Column::FileId.eq(file_id_str.clone()))
+                            .one(&db)
+                            .await;
+            println!("xx");
+            /*
+                        if let Ok(item) = item_result && (!item.is_some() || item.unwrap().date_modified > file_date_mod_compare) {
+
+                        }
+
+
+                                    let up_item = upsert_item(&db,
+                                                              file_name_without_ext,
+                                                              file_id_str,
+                                                              media_type,
+                                                              rel_path.clone()).await;
+
+                                    let metadata_entries = upsert_metadata(&db, full_path);
+
+                                    let metadata = items_metadata::ActiveModel {
+                                        item_id: Set(up_item.unwrap().unwrap().id),
+                                        tag_field: Set(TagField::Album),
+                                        value: Set("Album".to_owned()),
+                                        date_modified: Default::default(),
+                                        ..Default::default()  // Unset fields like id
+                                    };
+                        */
 
 
 

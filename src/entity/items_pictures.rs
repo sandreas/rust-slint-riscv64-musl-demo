@@ -1,3 +1,4 @@
+use chrono::Utc;
 use sea_orm::entity::prelude::*;
 
 use sea_orm::{ActiveModelBehavior, DeriveEntityModel};
@@ -13,6 +14,8 @@ pub struct Model {
     pub item: Option<super::item::Entity>,
     #[sea_orm(belongs_to, from = "picture_id", to = "id")]
     pub picture: Option<super::picture::Entity>,
+    
+    pub date_modified: chrono::DateTime<Utc>,
 }
 
 impl ActiveModelBehavior for crate::entity::items_pictures::ActiveModel {}
