@@ -11,13 +11,14 @@ use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use chrono::{DateTime, Local, NaiveDateTime};
+use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-
+use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, InsertResult, QueryFilter, Set};
+use sea_orm::sea_query::OnConflict;
+use crate::entity::item::{ActiveModel, ActiveModelEx};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -169,16 +170,15 @@ impl FileMediaSource {
 
             let file_date_mod_compare: DateTime<Local> = DateTime::from(file_date_modified);
 
-                        let item_result = item::Entity::find()
-                            .filter(item::Column::FileId.eq(file_id_str.clone()))
-                            .one(&db)
-                            .await;
-            println!("xx");
+            let item_result = item::Entity::find()
+                .filter(item::Column::FileId.eq(file_id_str.clone()))
+                .one(&db)
+                .await;
+            if let Ok(item) = item_result && (!item.is_some() || item.unwrap().date_modified > file_date_mod_compare) {
+                let i = upsert_item(&db, file_name_without_ext.clone(), file_id_str.clone(), media_type.clone(), rel_path.clone()).await;
+            }
+
             /*
-                        if let Ok(item) = item_result && (!item.is_some() || item.unwrap().date_modified > file_date_mod_compare) {
-
-                        }
-
 
                                     let up_item = upsert_item(&db,
                                                               file_name_without_ext,
@@ -227,6 +227,7 @@ impl FileMediaSource {
                 .one(db)
                 .await*/
         }
+
             /*
             .map(|e| {
 
@@ -498,30 +499,62 @@ impl MediaSource for FileMediaSource {
 }
 
 
-/*
-async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, media_type: item::MediaType, location: String) -> Result<Option<item::Model>, DbErr> {
+
+async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, media_type: item::MediaType, location: String) -> ActiveModelEx {
+    // todo: improve this
+    // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
+
+    let now = chrono::offset::Utc::now();
+    let result =item::ActiveModel::builder()
+        .set_file_id(file_id)
+        .set_media_type(media_type)
+        .set_location(location.trim_start_matches('/'))
+        .set_last_scan_random_key("")
+        .set_date_modified(now)
+        /*
+        .add_post(
+            post::ActiveModel::builder()
+                .set_title("Nice weather")
+                .add_tag(tag::ActiveModel::builder().set_tag("sunny")),
+        )
+
+         */
+        .save(db)
+        .await.expect("TODO: panic message");
+    result
+    /*
     let item = item::ActiveModel {
-        name: Set(name.to_string()),
         file_id: Set(file_id),
         media_type: Set(media_type),
         location: Set(location),
+        last_scan_random_key: Set("".to_string()),
         date_modified: Default::default(),
         ..Default::default()  // Unset fields like id
     };
 
+     */
+
+
     // Insert if no conflict on name, do nothing if exists
-    let result = item::Entity::insert(item.clone())
+    /*let result = item::Entity::insert(item)
         .on_conflict(
             OnConflict::column(item::Column::FileId)
-                .do_nothing()  // or .update_column(item::Column::Price) for update
+                .update_column(item::Column::MediaType)
+                .update_column(item::Column::Location)
+                .update_column(item::Column::DateModified)
+                .update_column(item::Column::LastScanRandomKey)
                 .to_owned()
         )
         .exec(db)
-        .await?;
 
+        .await;
+
+    result
+
+     */
     // item.id = result.last_insert_id();
     // result.last_insert_id()
-
+/*
     let model_only = item.clone().try_into_model();
     if let Ok(model) = model_only {
         return Ok(Some(model));
@@ -529,8 +562,10 @@ async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, med
     // Returns inserted model or None if conflicted
     Ok(None)
     // result
+
+ */
 }
-*/
+
 /*
 async fn bulk_upsert(db: &DatabaseConnection) {
     let items = vec![
