@@ -8,7 +8,7 @@ use cpal::Device;
 use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
 use std::fs::File;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
 use std::sync::Arc;
 use std::time::Duration;
 use rodio::source::SeekError;

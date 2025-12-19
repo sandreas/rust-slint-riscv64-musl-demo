@@ -1,5 +1,4 @@
-use evdev::{Device, EventSummary, InputEvent, KeyCode};
-use std::path::Path;
+use evdev::{Device, EventSummary, KeyCode};
 use tokio::sync::mpsc;
 
 #[derive(Debug)]
@@ -23,7 +22,7 @@ impl Headset {
 
     pub async fn run(
         &mut self,
-        evt_tx: mpsc::UnboundedSender<HeadsetEvent>,
+        _/*evt_tx*/: mpsc::UnboundedSender<HeadsetEvent>,
     ) {
 
         loop {

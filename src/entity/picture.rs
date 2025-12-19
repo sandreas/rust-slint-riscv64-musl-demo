@@ -15,7 +15,7 @@ pub struct Model {
     pub date_modified: NaiveDateTime,
 
     #[sea_orm(has_many, via = "items_pictures")]
-    pub items: HasMany<super::items::Entity>,
+    pub items: HasMany<super::item::Entity>,
 
 }
 

@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDateTime};
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
 #[sea_orm(rs_type = "i32", db_type = "Integer")]
@@ -38,6 +38,8 @@ pub struct Model {
     #[sea_orm(has_many, via = "items_pictures")]
     pub pictures: HasMany<super::picture::Entity>,
 
+    #[sea_orm(has_many)]
+    pub progress_history: HasMany<super::items_progress_history::Entity>,
 
     /*
     // properties needed for listing

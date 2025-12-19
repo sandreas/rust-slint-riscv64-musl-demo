@@ -10,7 +10,6 @@ mod file_media_source;
 mod media_source_trait;
 mod migrator;
 mod entity;
-mod settings_manager;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -21,20 +20,18 @@ struct Args {
 }
 
 use crate::player::{Player, PlayerCommand, PlayerEvent};
-use slint::{ComponentHandle, Model, ModelRc, SharedString, SharedVector, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use evdev::Device;
-use sea_orm::{Database, DatabaseConnection, DbConn, DbErr};
+
+use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, items_progress, picture, setting};
+use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, picture, items_progress_history};
 use crate::file_media_source::FileMediaSource;
-use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 use crate::migrator::Migrator;
-use crate::settings_manager::SettingsManager;
 
 slint::include_modules!();
 
@@ -54,8 +51,7 @@ async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection,
             .register(items_json_metadata::Entity)
             .register(picture::Entity)
             .register(items_pictures::Entity)
-            .register(setting::Entity)
-            .register(items_progress::Entity)
+            .register(items_progress_history::Entity)
             .apply(&db)
             .await?;
 
@@ -95,16 +91,16 @@ async fn main() -> Result<(), slint::PlatformError> {
     let first_run = !Path::new(&db_path).exists();
     let db_url = format!("sqlite://{}?mode=rwc", db_path);
     let connect_result = connect_db(&db_url, first_run).await;
-    if(connect_result.is_err()) {
+    if connect_result.is_err() {
         return Err(slint::PlatformError::Other(format!("Could not find, create or migrate database: {}", connect_result.err().unwrap())));
     }
 
     let db = connect_result.unwrap();
-    let settings_manager = SettingsManager::new(db.clone());
+    // let settings_manager = SettingsManager::new(db.clone());
 
 
-    let display_brightness = settings_manager.get("display.brightness", 1000).await;
-    let dark_mode = settings_manager.get("appearance.dark_mode", true);
+    let display_brightness = 1000; // settings_manager.get("display.brightness", 1000).await;
+    let dark_mode = true; // settings_manager.get("appearance.dark_mode", true);
 
     let file_source = FileMediaSource::new(db.clone(), args.base_directory);
     let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
@@ -278,7 +274,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     slint_app_window.run()
 }
 
-fn load_preferences(pref: SlintPreferences) {
+fn load_preferences(_: SlintPreferences) {
     todo!()
 }
 

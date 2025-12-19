@@ -6,7 +6,6 @@ use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::prelude::Accessor;
 use lofty::probe::Probe;
 use lofty::tag::TagType::Mp4Ilst;
-use std::ffi::OsStr;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -14,12 +13,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
-use crate::entity::items_metadata;
-use crate::entity::items_metadata::TagField;
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::sea_query::OnConflict;
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, LoaderTrait, ModelTrait, QueryFilter, RelationTrait, Set, TryIntoModel};
-use tracing_subscriber::layer::SubscriberExt;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 
 #[derive(Clone)]
@@ -31,6 +26,18 @@ struct FileMediaSourceState {
     pub db: DatabaseConnection,
     pub base_path: String,
 }
+
+/*
+pub fn file_modified_time_in_seconds(path: &str) -> u64 {
+    fs::metadata(path)
+        .unwrap()
+        .modified()
+        .unwrap()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+*/
 
 impl FileMediaSource {
     pub fn new(db: DatabaseConnection, base_path: String) -> Self {
@@ -95,7 +102,7 @@ impl FileMediaSource {
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
-        let cache_path = format!("{}/cache/", inner.base_path.trim_end_matches('/').to_string())
+        let cache_path = format!("{}/cache/", inner.base_path.trim_end_matches('/').to_string());
         drop(inner);
         cache_path
     }
@@ -128,6 +135,7 @@ impl FileMediaSource {
 
             });
         let cache_path = self.cache_path();
+
         for audio_file in audio_files {
             let full_path = audio_file.path().to_str().unwrap().to_string();
             let start_index = base_path.len();
@@ -140,8 +148,12 @@ impl FileMediaSource {
                 item::MediaType::Unspecified
             };
 
-            // todo: check inode
+            // update file modification time
+            // let file = File::create("Foo.txt").unwrap();
+            // file.set_modified(SystemTime::now()).unwrap();
 
+
+/*
             let file_id = file_id::get_file_id(full_path.clone()).unwrap();
             let file_id_str = format!("{:?}", file_id);
 
@@ -166,7 +178,7 @@ impl FileMediaSource {
                 date_modified: Default::default(),
                 ..Default::default()  // Unset fields like id
             };
-
+*/
 
 
 
@@ -374,6 +386,8 @@ impl MediaSource for FileMediaSource {
     }
 
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
+        vec![]
+        /*
         let inner = self.state.lock().unwrap();
 
 
@@ -393,10 +407,13 @@ impl MediaSource for FileMediaSource {
             .collect();
         drop(inner);
         results
+
+         */
     }
 
     async fn find(&self, id: &str) -> Option<MediaSourceItem> {
-
+        None
+        /*
         let inner = self.state.lock().unwrap();
         let db = inner.db.clone();
         let db_item = item::Entity::find()
@@ -430,6 +447,8 @@ impl MediaSource for FileMediaSource {
             });
         };
         None
+
+         */
     }
 
     async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>> {
@@ -462,7 +481,7 @@ impl MediaSource for FileMediaSource {
 }
 
 
-
+/*
 async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, media_type: item::MediaType, location: String) -> Result<Option<item::Model>, DbErr> {
     let item = item::ActiveModel {
         name: Set(name.to_string()),
@@ -494,7 +513,7 @@ async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, med
     Ok(None)
     // result
 }
-
+*/
 /*
 async fn bulk_upsert(db: &DatabaseConnection) {
     let items = vec![
@@ -515,6 +534,7 @@ async fn bulk_upsert(db: &DatabaseConnection) {
 
 
 // does not work, somehow the trait is not satisfied
+/*
 async fn get_item_with_metadata(
     db: &DatabaseConnection,
     item_id: i32
@@ -531,6 +551,8 @@ async fn get_item_with_metadata(
         (item, metadata)
     }))
 }
+
+ */
 
 
 /*
