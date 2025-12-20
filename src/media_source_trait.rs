@@ -43,6 +43,7 @@ pub struct MediaSourceMetadata {
     pub artist: Option<String>,
     pub title: Option<String>,
     pub album: Option<String>,
+    pub genre: Option<String>,
     pub composer: Option<String>,
     pub series: Option<String>,
     pub part: Option<String>,
@@ -56,12 +57,13 @@ impl MediaSourceMetadata {
                composer: Option<String>,
                series: Option<String>,
                part: Option<String>,
-
+               genre: Option<String>,
                chapters: Vec<MediaSourceChapter>) -> Self {
         Self {
             artist,
             title,
             album,
+            genre,
             composer,
             series,
             part,

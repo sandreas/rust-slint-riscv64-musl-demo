@@ -1,24 +1,25 @@
-use lofty::tag::Accessor;
-use std::ffi::OsStr;
 use crate::item;
 use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use lofty::error::LoftyError;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
+use lofty::tag::Accessor;
 use lofty::tag::TagType::Mp4Ilst;
+use std::ffi::OsStr;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
-use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, InsertResult, QueryFilter, Set};
-use sea_orm::sea_query::OnConflict;
 use crate::entity::item::{ActiveModel, ActiveModelEx};
+use crate::entity::items_metadata;
+use crate::entity::items_metadata::TagField;
+use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -103,6 +104,8 @@ impl FileMediaSource {
             })),
         }
     }
+
+
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
@@ -271,7 +274,7 @@ impl FileMediaSource {
             Self::load_metadata_by_extension(cache_path.clone(), p.clone(), ext.to_str().unwrap().to_string());
         }
 
-        MediaSourceMetadata::new(None, None, None, None, None, None, vec![])
+        MediaSourceMetadata::new(None, None, None, None, None, None, None, vec![])
     }
 
     fn load_metadata_by_extension(cache_path: String, path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
@@ -333,6 +336,8 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             let mut final_series : Option<String> = None;
             let mut final_part : Option<String> = None;
             let mut final_composer: Option<String> = None;
+            let mut final_genre: Option<String> = None;
+
             if tag.tag_type() == Mp4Ilst {
                 let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
                 let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
@@ -365,7 +370,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 let series = mp4tag.strings_of(&series_indent).next();
                 let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
                 let part = mp4tag.strings_of(&part_indent).next();
-
+                let genre = mp4tag.genre().map(String::from);
                 // let series_part = format!("{} {}", series, part);
 
                 if series.is_some() {
@@ -393,10 +398,11 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 final_composer,
                 final_series,
                 final_part,
+                final_genre,
                 chapters))
         }
 
-        Ok(MediaSourceMetadata::new(None, None, None, None, None, None,vec![]))
+        Ok(MediaSourceMetadata::new(None, None, None, None, None, None, None,vec![]))
     }
 
     fn map_media_source_to_orm_media_type(&self, media_type: MediaType) -> item::MediaType {
@@ -428,14 +434,117 @@ impl MediaSource for FileMediaSource {
             "2" => item::MediaType::Audiobook,
             _ => item::MediaType::Unspecified
         };
-        let db_items = item::Entity::find()
-            .filter(item::Column::MediaType.eq(media_type))
-            .all(&db)
-            .await;
+
+        let items = item::Entity::load()
+                .filter(item::Column::MediaType.eq(media_type))
+                .with(items_metadata::Entity)
+                .all(&db)
+                .await;
+        if items.is_err() {
+            return vec![];
+        }
+
+        let items = items.unwrap();
+        let result: Vec<MediaSourceItem> = items.iter().map(|i| {
+            let mut title : String = i.location.clone();
+            let mut artist : Option<String> = None;
+            let mut album : Option<String> = None;
+            let mut genre : Option<String> = None;
+
+            for tag in &i.metadata {
+                match tag.tag_field {
+                    TagField::Title => title = tag.value.clone(),
+                    TagField::Artist => artist = Some(tag.value.clone()),
+                    TagField::Album => album = Some(tag.value.clone()),
+                    TagField::Genre => genre = Some(tag.value.clone()),
+                };
+            }
+
+            MediaSourceItem {
+                id: i.location.to_string(),
+                title: title.clone(),
+                media_type: MediaType::Unspecified,
+                metadata: MediaSourceMetadata {
+                    title: Some(title.clone()),
+                    artist,
+                    album,
+                    genre,
+                    composer: None,
+                    series: None,
+                    part: None,
+                    chapters: vec![],
+                },
+            }
+        }).collect();
+
+        result
+        /*
+
+            self.make_something(query).await? // todo: error handling
+            .iter().map(|i| {
+            let mut meta = MediaSourceMetadata {
+                artist: None,
+                title: None,
+                album: None,
+                genre: None,
+                composer: None,
+                series: None,
+                part: None,
+                chapters: vec![],
+            };
+            for tag in i.metadata {
+                match tag.tag_field {
+                    TagField::Title => meta.title = Some(tag.value),
+                    TagField::Artist => meta.artist = Some(tag.value),
+                    TagField::Album => meta.album = Some(tag.value),
+                    TagField::Genre => meta.genre = Some(tag.value),
+                };
+            }
+            let meta_clone = meta.clone();
+
+            let title = if meta.title.is_some() {
+                meta.title.unwrap()
+            } else {
+                i.location
+            };
+
+            let media_type = match i.media_type {
+                item::MediaType::Audiobook => MediaType::Audiobook,
+                item::MediaType::Music => MediaType::Music,
+                _ => MediaType::Unspecified,
+            };
+            MediaSourceItem {
+                id: i.id.to_string(),
+                title,
+                media_type,
+                metadata: meta_clone,
+            }
+        });
 
 
 
-        vec![]
+        let db_items = db_active_items.map(|r| {
+            r
+        });
+        db_items.map(|db_item| {
+           MediaSourceItem {
+               id: "".to_string(),
+               title: "".to_string(),
+               media_type: MediaType::Unspecified,
+               metadata: MediaSourceMetadata {
+                   artist: None,
+                   title: None,
+                   album: None,
+                   composer: None,
+                   series: None,
+                   part: None,
+                   genre: None,
+                   chapters: vec![],
+               },
+           }
+        });
+*/
+        // vec![]
         /*
         let results = inner.items
             .iter()
@@ -449,6 +558,8 @@ impl MediaSource for FileMediaSource {
 
          */
     }
+
+
 
     async fn find(&self, id: &str) -> Option<MediaSourceItem> {
         None
