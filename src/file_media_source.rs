@@ -20,6 +20,8 @@ use crate::entity::items_metadata;
 use crate::entity::items_metadata::TagField;
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::prelude::HasMany;
+use crate::entity::items_metadata::TagField::Album;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -30,18 +32,6 @@ pub struct FileMediaSource {
 struct FileMediaSourceState {
     pub base_path: String,
 }
-
-/*
-pub fn file_modified_time_in_seconds(path: &str) -> u64 {
-    fs::metadata(path)
-        .unwrap()
-        .modified()
-        .unwrap()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-}
-*/
 
 impl FileMediaSource {
     pub fn new(db: DatabaseConnection, base_path: String) -> Self {
@@ -106,6 +96,89 @@ impl FileMediaSource {
     }
 
 
+    pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
+        let mut title : String = i.location.clone();
+        let mut artist : Option<String> = None;
+        let mut album : Option<String> = None;
+        let mut genre : Option<String> = None;
+
+        for tag in metadata {
+            match tag.tag_field {
+                TagField::Title => title = tag.value.clone(),
+                TagField::Artist => artist = Some(tag.value.clone()),
+                TagField::Album => album = Some(tag.value.clone()),
+                TagField::Genre => genre = Some(tag.value.clone()),
+            };
+        }
+
+        MediaSourceItem {
+            id: i.location.to_string(),
+            title: title.clone(),
+            media_type: MediaType::Unspecified,
+            metadata: MediaSourceMetadata {
+                title: Some(title.clone()),
+                artist,
+                album,
+                genre,
+                composer: None,
+                series: None,
+                part: None,
+                chapters: vec![],
+            },
+        }
+    }
+
+
+
+    async fn upsert_item(&self, id: i32, file_id: String, media_type: item::MediaType, location: String, meta: MediaSourceMetadata) -> ActiveModelEx {
+        // todo: improve this
+        // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
+        let db = self.db.clone();
+
+        let now = chrono::offset::Utc::now();
+
+        // let meta_vec = Active
+
+        let builder = if id == 0 {
+            ActiveModel::builder()
+                .set_file_id(file_id)
+                .set_media_type(media_type)
+                .set_location(location.trim_start_matches('/'))
+                .set_last_scan_random_key("")
+                .set_date_modified(now)
+
+        } else {
+            ActiveModel::builder()
+                .set_id(id)
+                .set_file_id(file_id)
+                .set_media_type(media_type)
+                .set_location(location.trim_start_matches('/'))
+                .set_last_scan_random_key("")
+                .set_date_modified(now)
+        };
+
+        /*
+        if meta.album.is_some() {
+            builder_ref.add_metadatum(
+                items_metadata::ActiveModel::builder()
+                    .set_tag_field(Album)
+                    .set_value(meta.album.unwrap())
+            );
+        }
+        */
+
+
+        let result = builder
+            // .add_metadatum()
+            // .add_picture()
+            // .add_progress_history()
+
+            .save(&db)
+            .await
+            .expect("todo");
+        result
+
+    }
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
@@ -163,7 +236,7 @@ impl FileMediaSource {
             let file_id = file_id::get_file_id(full_path.clone()).unwrap();
             let file_id_str = format!("{:?}", file_id);
 
-            let file_name_without_ext =     audio_file
+            let file_name_without_ext = audio_file
                 .path()                // PathBuf
                 .file_stem()           // Option<&OsStr>
                 .and_then(OsStr::to_str)
@@ -186,95 +259,32 @@ impl FileMediaSource {
             };
 
             if item_is_modified {
+                let empty_meta = MediaSourceMetadata {
+                    artist: None,
+                    title: None,
+                    album: None,
+                    genre: None,
+                    composer: None,
+                    series: None,
+                    part: None,
+                    chapters: vec![],
+                };
+                // file_name_without_ext
+                let mut item_meta_result = self.extract_metadata(full_path.clone()).await;
+                if item_meta_result.is_err() {
+                    item_meta_result = Ok(empty_meta.clone());
+                }
                 println!("item is modified");
-                let i = upsert_item(&db, id, file_id_str.clone(), media_type.clone(), rel_path.clone()).await;
+                let item_meta = if let Ok(meta) = item_meta_result {
+                    meta
+                } else {
+                    empty_meta.clone()
+                };
+                let i = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), item_meta).await;
             } else {
                 println!("item NOT modified");
             }
-
-
-
-
-            /*
-
-                                    let up_item = upsert_item(&db,
-                                                              file_name_without_ext,
-                                                              file_id_str,
-                                                              media_type,
-                                                              rel_path.clone()).await;
-
-                                    let metadata_entries = upsert_metadata(&db, full_path);
-
-                                    let metadata = items_metadata::ActiveModel {
-                                        item_id: Set(up_item.unwrap().unwrap().id),
-                                        tag_field: Set(TagField::Album),
-                                        value: Set("Album".to_owned()),
-                                        date_modified: Default::default(),
-                                        ..Default::default()  // Unset fields like id
-                                    };
-                        */
-
-
-
-
-            /*
-            let item = item::ActiveModel {
-                name: Set("Example Item".to_string()),
-                file_id: file_id_str.clone().into_active_value(),
-                media_type: media_type.into_active_value(),
-                location: rel_path.into_active_value(),
-                date_modified: Default::default(),
-                ..Default::default()  // Unset fields like id
-            };
-
-             */
-            // item.insert(db).await
-            // Find by primary key
-            // .filter(cake::Column::Name.contains("chocolate"))
-            // let db_item: Option<item::Model> = item::Model::filter(1).one(db).await?;
-            /*
-            let db_item = item::Entity::find()
-                .filter(item::Column::FileId.eq(file_id_str.clone()))
-                .one(&db)
-                .await;
-
-             */
-            /*item::Entity::find()
-                .filter(item::Column::FileId.eq(file_id_str.to_string()))
-                .one(db)
-                .await*/
         }
-
-            /*
-            .map(|e| {
-
-
-                let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
-                let metadata = Self::load_metadata(cache_path.clone(), full_path.clone());
-                let item = MediaSourceItem {
-                    id: rel_path.to_string(),
-                    media_type,
-                    title,
-                    metadata,
-                };
-                // (item.id.clone(), item) // (key, value) for HashMap
-                item
-            }).collect::<Vec<MediaSourceItem>>();
-            */
-
-    }
-
-
-    fn load_metadata(cache_path: String, p: String) -> MediaSourceMetadata {
-        // if p0.ends_with("")
-        let path = Path::new(p.as_str());
-
-
-        if let Some(ext) = path.extension() {
-            Self::load_metadata_by_extension(cache_path.clone(), p.clone(), ext.to_str().unwrap().to_string());
-        }
-
-        MediaSourceMetadata::new(None, None, None, None, None, None, None, vec![])
     }
 
     fn load_metadata_by_extension(cache_path: String, path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
@@ -387,9 +397,6 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
             }
 
-
-
-
             return Ok(MediaSourceMetadata::new(
                 tag.artist().map(|s| s.to_string()),
                 tag.title().map(|s| s.to_string()),
@@ -412,6 +419,115 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             _ => item::MediaType::Unspecified,
         }
     }
+
+    async fn extract_metadata(&self, path: String) -> Result<MediaSourceMetadata, LoftyError> {
+        let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
+        /*
+        let tagged_file = Probe::open(path)
+            .expect("ERROR: Bad path provided!")
+            .read()
+            .expect("ERROR: Failed to read file!");
+        */
+
+        /*
+        let read_cfg = ReadConfig {
+    read_meta_items: true,
+    read_image_data: false,
+    read_chapter_list: false,
+    read_chapter_track: false,
+    read_audio_info: false,
+    chpl_timescale: ChplTimescale::DEFAULT,
+};
+let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
+         */
+        let tag = match tagged_file.primary_tag() {
+            Some(primary_tag) => Some(primary_tag),
+            // If the "primary" tag doesn't exist, we just grab the
+            // first tag we can find. Realistically, a tag reader would likely
+            // iterate through the tags to find a suitable one.
+            None => tagged_file.first_tag(),
+        };
+
+        let properties = tagged_file.properties();
+        let duration = properties.duration();
+
+        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
+
+        if let Some(tag) = tag {
+            let mut tag_cover = if tag.picture_count() > 0 {
+                Some(tag.pictures().first().unwrap().data())
+            } else {
+                None
+            };
+
+            let mut final_series : Option<String> = None;
+            let mut final_part : Option<String> = None;
+            let mut final_composer: Option<String> = None;
+            let mut final_genre: Option<String> = None;
+
+            if tag.tag_type() == Mp4Ilst {
+                let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
+                let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
+                tag_cover = if mp4images.len() > 0 {
+                    Some(mp4images.first().unwrap().1.data)
+                } else {
+                    None
+                };
+
+                let tmp_chaps = mp4tag.chapters().iter().rev();
+                let mut end = duration;
+                for tmp_chap in tmp_chaps {
+                    let duration = end - tmp_chap.start;
+                    chapters.push(MediaSourceChapter::new(tmp_chap.title.clone(), tmp_chap.start, duration));
+                    end -= duration;
+                }
+                chapters.reverse();
+
+                // https://github.com/saecki/mp4ameta/issues/35
+                // tag.itunes_string("ASIN");
+                // let artist_ident = Fourcc(*b"\xa9mvmt");
+                // mp4tag.movement()
+
+                let movement = mp4tag.movement();
+                let movement_index = mp4tag.movement_index();
+                let final_composer = mp4tag.composer();
+
+                // mp4tag.artist_sort_order()
+                let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
+                let series = mp4tag.strings_of(&series_indent).next();
+                let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
+                let part = mp4tag.strings_of(&part_indent).next();
+                let genre = mp4tag.genre().map(String::from);
+                // let series_part = format!("{} {}", series, part);
+
+                if series.is_some() {
+                    final_series = series.map(|s| s.to_string());
+                } else if movement.is_some() {
+                    final_series = movement.map(|s| s.to_string());
+                }
+
+                if part.is_some() {
+                    final_part = part.map(|s| s.to_string());
+                } else if movement_index.is_some() {
+                    final_part = movement_index.map(|s| s.to_string());
+                }
+
+            }
+
+            return Ok(MediaSourceMetadata::new(
+                tag.artist().map(|s| s.to_string()),
+                tag.title().map(|s| s.to_string()),
+                tag.album().map(|s| s.to_string()),
+
+                final_composer,
+                final_series,
+                final_part,
+                final_genre,
+                chapters))
+        }
+
+        Ok(MediaSourceMetadata::new(None, None, None, None, None, None, None,vec![]))
+    }
 }
 
 #[async_trait]
@@ -424,8 +540,6 @@ impl MediaSource for FileMediaSource {
     }
 
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
-
-        // let inner = self.state.lock().unwrap();
         let db = self.db.clone();
 
         // let q = query.to_lowercase();
@@ -446,159 +560,30 @@ impl MediaSource for FileMediaSource {
 
         let items = items.unwrap();
         let result: Vec<MediaSourceItem> = items.iter().map(|i| {
-            let mut title : String = i.location.clone();
-            let mut artist : Option<String> = None;
-            let mut album : Option<String> = None;
-            let mut genre : Option<String> = None;
-
-            for tag in &i.metadata {
-                match tag.tag_field {
-                    TagField::Title => title = tag.value.clone(),
-                    TagField::Artist => artist = Some(tag.value.clone()),
-                    TagField::Album => album = Some(tag.value.clone()),
-                    TagField::Genre => genre = Some(tag.value.clone()),
-                };
-            }
-
-            MediaSourceItem {
-                id: i.location.to_string(),
-                title: title.clone(),
-                media_type: MediaType::Unspecified,
-                metadata: MediaSourceMetadata {
-                    title: Some(title.clone()),
-                    artist,
-                    album,
-                    genre,
-                    composer: None,
-                    series: None,
-                    part: None,
-                    chapters: vec![],
-                },
-            }
+            self.map_db_model_to_media_item(i, &i.metadata)
         }).collect();
 
         result
-        /*
-
-            self.make_something(query).await? // todo: error handling
-            .iter().map(|i| {
-            let mut meta = MediaSourceMetadata {
-                artist: None,
-                title: None,
-                album: None,
-                genre: None,
-                composer: None,
-                series: None,
-                part: None,
-                chapters: vec![],
-            };
-            for tag in i.metadata {
-                match tag.tag_field {
-                    TagField::Title => meta.title = Some(tag.value),
-                    TagField::Artist => meta.artist = Some(tag.value),
-                    TagField::Album => meta.album = Some(tag.value),
-                    TagField::Genre => meta.genre = Some(tag.value),
-                };
-            }
-            let meta_clone = meta.clone();
-
-            let title = if meta.title.is_some() {
-                meta.title.unwrap()
-            } else {
-                i.location
-            };
-
-            let media_type = match i.media_type {
-                item::MediaType::Audiobook => MediaType::Audiobook,
-                item::MediaType::Music => MediaType::Music,
-                _ => MediaType::Unspecified,
-            };
-            MediaSourceItem {
-                id: i.id.to_string(),
-                title,
-                media_type,
-                metadata: meta_clone,
-            }
-        });
-
-
-
-        let db_items = db_active_items.map(|r| {
-            r
-        });
-        db_items.map(|db_item| {
-           MediaSourceItem {
-               id: "".to_string(),
-               title: "".to_string(),
-               media_type: MediaType::Unspecified,
-               metadata: MediaSourceMetadata {
-                   artist: None,
-                   title: None,
-                   album: None,
-                   composer: None,
-                   series: None,
-                   part: None,
-                   genre: None,
-                   chapters: vec![],
-               },
-           }
-        });
-*/
-        // vec![]
-        /*
-        let results = inner.items
-            .iter()
-            .filter(|item| {
-                item.media_type.eq(&media_type)
-            })
-            .cloned()
-            .collect();
-        drop(inner);
-        results
-
-         */
     }
 
-
-
     async fn find(&self, id: &str) -> Option<MediaSourceItem> {
-        None
-        /*
-        let inner = self.state.lock().unwrap();
-        let db = inner.db.clone();
-        let db_item = item::Entity::find()
+        let db = self.db.clone();
+        let items = item::Entity::load()
             .filter(item::Column::Id.eq(id))
+            .with(items_metadata::Entity)
             .one(&db)
-            // .with(items_metadata::Entity)
             .await;
-        // let metadata: Vec<items_metadata::Entity> =
 
-        drop(inner);
+        if items.is_err() {
+            return None;
+        }
 
-        if let Ok(model_option) = db_item && let Some(model) = model_option {
-            Some(MediaSourceItem {
-                id: model.id.to_string(),
+        let items = items.unwrap();
 
-                title: model.name,
-                media_type: match model.media_type {
-                    item::MediaType::Music => MediaType::Music,
-                    item::MediaType::Audiobook => MediaType::Audiobook,
-                    _ => MediaType::Unspecified,
-                },
-                metadata: MediaSourceMetadata {
-                    artist: None,
-                    title: None,
-                    album: None,
-                    composer: None,
-                    series: None,
-                    part: None,
-                    chapters: vec![],
-                },
-            });
-        };
+        if let Some(i) = items {
+            return Some(self.map_db_model_to_media_item(&i, &i.metadata));
+        }
         None
-
-         */
     }
 
     async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>> {
@@ -630,154 +615,3 @@ impl MediaSource for FileMediaSource {
     }
 }
 
-
-
-async fn upsert_item(db: &DatabaseConnection, id: i32, file_id: String, media_type: item::MediaType, location: String) -> ActiveModelEx {
-    // todo: improve this
-    // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
-
-    let now = chrono::offset::Utc::now();
-    if id == 0 {
-
-    }
-    let builder = if id == 0 {
-        ActiveModel::builder()
-            .set_file_id(file_id)
-            .set_media_type(media_type)
-            .set_location(location.trim_start_matches('/'))
-            .set_last_scan_random_key("")
-            .set_date_modified(now)
-    } else {
-        ActiveModel::builder()
-            .set_id(id)
-            .set_file_id(file_id)
-            .set_media_type(media_type)
-            .set_location(location.trim_start_matches('/'))
-            .set_last_scan_random_key("")
-            .set_date_modified(now)
-    };
-    let result = builder
-
-        /*
-        .add_post(
-            post::ActiveModel::builder()
-                .set_title("Nice weather")
-                .add_tag(tag::ActiveModel::builder().set_tag("sunny")),
-        )
-
-         */
-        .save(db)
-        .await
-        .expect("todo");
-    result
-    /*
-    let item = item::ActiveModel {
-        file_id: Set(file_id),
-        media_type: Set(media_type),
-        location: Set(location),
-        last_scan_random_key: Set("".to_string()),
-        date_modified: Default::default(),
-        ..Default::default()  // Unset fields like id
-    };
-
-     */
-
-
-    // Insert if no conflict on name, do nothing if exists
-    /*let result = item::Entity::insert(item)
-        .on_conflict(
-            OnConflict::column(item::Column::FileId)
-                .update_column(item::Column::MediaType)
-                .update_column(item::Column::Location)
-                .update_column(item::Column::DateModified)
-                .update_column(item::Column::LastScanRandomKey)
-                .to_owned()
-        )
-        .exec(db)
-
-        .await;
-
-    result
-
-     */
-    // item.id = result.last_insert_id();
-    // result.last_insert_id()
-/*
-    let model_only = item.clone().try_into_model();
-    if let Ok(model) = model_only {
-        return Ok(Some(model));
-    }
-    // Returns inserted model or None if conflicted
-    Ok(None)
-    // result
-
- */
-}
-
-/*
-async fn bulk_upsert(db: &DatabaseConnection) {
-    let items = vec![
-        item::ActiveModel { name: Set("Item1".into()),  ..Default::default() },
-        item::ActiveModel { name: Set("Item2".into()), ..Default::default() },
-    ];
-
-    let result = item::Entity::insert_many(items)
-        .on_conflict(OnConflict::column(item::Column::Name).do_nothing().to_owned())
-        .exec(db)
-        .await;
-    // result.rows_affected shows how many were actually inserted [web:1][web:3]
-
-}
-
- */
-
-
-
-// does not work, somehow the trait is not satisfied
-/*
-async fn get_item_with_metadata(
-    db: &DatabaseConnection,
-    item_id: i32
-) -> Result<Option<(item::Model, Vec<items_metadata::Model>)>, sea_orm::DbErr> {
-    let item_with_meta = item::Entity::find()
-        .filter(item::Column::Id.eq(item_id))
-        .with(item::Relation::ItemsMetadata)  // Eager load has_many relation
-        .one(db)
-        .await?;
-
-    Ok(item_with_meta.map(|model_ex| {
-        let item = model_ex.model;
-        let metadata = model_ex.related.clone().unwrap_or_default();
-        (item, metadata)
-    }))
-}
-
- */
-
-
-/*
-async fn get_item_with_metadata(
-    db: &DatabaseConnection,
-    item_id: i32
-) -> Result<Option<(item::Model, Vec<items_metadata::Model>)>, sea_orm::DbErr> {
-    // Fetch base item first
-    let item = item::Entity::find()
-        .filter(item::Column::Id.eq(item_id))
-        .one(db)
-        .await?;
-
-    let (item, metadata) = match item {
-        Some(item) => {
-            // Load related metadata (has_many)
-
-            let metadata = item.find_related(items_metadata::Entity)
-                .all(db)
-                .await?;
-            (Some(item), metadata)
-        }
-        None => (None, vec![]),
-    };
-
-    Ok(item.map(|i| (i, metadata)))
-}
-*/
