@@ -22,11 +22,11 @@ use crate::entity::item::{ActiveModel, ActiveModelEx};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
+    pub db: DatabaseConnection,
     state: Arc<Mutex<FileMediaSourceState>>,
 }
 
 struct FileMediaSourceState {
-    pub db: DatabaseConnection,
     pub base_path: String,
 }
 
@@ -96,8 +96,9 @@ impl FileMediaSource {
             }).collect::<Vec<MediaSourceItem>>();
         */
         Self {
+            db,
             state: Arc::new(Mutex::new(FileMediaSourceState {
-                db,
+
                 base_path
             })),
         }
@@ -114,7 +115,7 @@ impl FileMediaSource {
         let audio_extensions = vec!("mp3", "m4b");
         let inner = self.state.lock().unwrap();
         let base_path = inner.base_path.clone();
-        let db = inner.db.clone();
+        let db = self.db.clone();
         drop(inner);
 
 
@@ -174,9 +175,22 @@ impl FileMediaSource {
                 .filter(item::Column::FileId.eq(file_id_str.clone()))
                 .one(&db)
                 .await;
-            if let Ok(item) = item_result && (!item.is_some() || item.unwrap().date_modified > file_date_mod_compare) {
-                let i = upsert_item(&db, file_name_without_ext.clone(), file_id_str.clone(), media_type.clone(), rel_path.clone()).await;
+
+            let (item_is_modified, id) = if let Ok(item) = item_result && let Some(i) = item {
+                (i.date_modified < file_date_mod_compare, i.id)
+            } else {
+                (true, 0)
+            };
+
+            if item_is_modified {
+                println!("item is modified");
+                let i = upsert_item(&db, id, file_id_str.clone(), media_type.clone(), rel_path.clone()).await;
+            } else {
+                println!("item NOT modified");
             }
+
+
+
 
             /*
 
@@ -404,18 +418,25 @@ impl MediaSource for FileMediaSource {
     }
 
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem> {
-        vec![]
-        /*
-        let inner = self.state.lock().unwrap();
 
+        // let inner = self.state.lock().unwrap();
+        let db = self.db.clone();
 
         // let q = query.to_lowercase();
         let media_type = match query {
-            "4" => MediaType::Music,
-            "2" => MediaType::Audiobook,
-            _ => MediaType::Unspecified
+            "4" => item::MediaType::Music,
+            "2" => item::MediaType::Audiobook,
+            _ => item::MediaType::Unspecified
         };
+        let db_items = item::Entity::find()
+            .filter(item::Column::MediaType.eq(media_type))
+            .all(&db)
+            .await;
 
+
+
+        vec![]
+        /*
         let results = inner.items
             .iter()
             .filter(|item| {
@@ -500,17 +521,32 @@ impl MediaSource for FileMediaSource {
 
 
 
-async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, media_type: item::MediaType, location: String) -> ActiveModelEx {
+async fn upsert_item(db: &DatabaseConnection, id: i32, file_id: String, media_type: item::MediaType, location: String) -> ActiveModelEx {
     // todo: improve this
     // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
 
     let now = chrono::offset::Utc::now();
-    let result =item::ActiveModel::builder()
-        .set_file_id(file_id)
-        .set_media_type(media_type)
-        .set_location(location.trim_start_matches('/'))
-        .set_last_scan_random_key("")
-        .set_date_modified(now)
+    if id == 0 {
+
+    }
+    let builder = if id == 0 {
+        ActiveModel::builder()
+            .set_file_id(file_id)
+            .set_media_type(media_type)
+            .set_location(location.trim_start_matches('/'))
+            .set_last_scan_random_key("")
+            .set_date_modified(now)
+    } else {
+        ActiveModel::builder()
+            .set_id(id)
+            .set_file_id(file_id)
+            .set_media_type(media_type)
+            .set_location(location.trim_start_matches('/'))
+            .set_last_scan_random_key("")
+            .set_date_modified(now)
+    };
+    let result = builder
+
         /*
         .add_post(
             post::ActiveModel::builder()
@@ -520,7 +556,8 @@ async fn upsert_item(db: &DatabaseConnection, name: String, file_id: String, med
 
          */
         .save(db)
-        .await.expect("TODO: panic message");
+        .await
+        .expect("todo");
     result
     /*
     let item = item::ActiveModel {
