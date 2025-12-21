@@ -305,131 +305,6 @@ impl FileMediaSource {
         }
     }
 
-    fn load_metadata_by_extension(cache_path: String, path: String, ext: String) -> core::result::Result<MediaSourceMetadata, LoftyError> {
-        /*
-        Idea for covers:
-        - Softlink files to a hashed central file (see https://doc.rust-lang.org/std/fs/fn.soft_link.html)
-        - Alternatively: Create a filename with the hash in the filename
-        - create softlink in cache for relative path linking to the real cache file
-            - Audio file: ./media/audiobooks/Harry Potter.m4b
-            - Softlink Big (500x500px): ./cache/audiobooks/Harry Potter.m4b.cover.jpg
-            - Softlink Listing (25%-33% of 368px => 92-128px): ./cache/audiobooks/Harry Potter.m4b.listing.jpg
-            - audio file hash marker: ./cache/audiobooks/Harry Potter.m4b.<a-fast-hash-over-the-content>
-            - Real files:
-                - ./cache/images/<a-fast-hash-over-the-content>.cover.jpg
-                - ./cache/images/<a-fast-hash-over-the-content>.tb.jpg
-
-         */
-
-
-        let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
-        /*
-        let tagged_file = Probe::open(path)
-            .expect("ERROR: Bad path provided!")
-            .read()
-            .expect("ERROR: Failed to read file!");
-        */
-
-        /*
-        let read_cfg = ReadConfig {
-    read_meta_items: true,
-    read_image_data: false,
-    read_chapter_list: false,
-    read_chapter_track: false,
-    read_audio_info: false,
-    chpl_timescale: ChplTimescale::DEFAULT,
-};
-let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
-         */
-        let tag = match tagged_file.primary_tag() {
-            Some(primary_tag) => Some(primary_tag),
-            // If the "primary" tag doesn't exist, we just grab the
-            // first tag we can find. Realistically, a tag reader would likely
-            // iterate through the tags to find a suitable one.
-            None => tagged_file.first_tag(),
-        };
-
-        let properties = tagged_file.properties();
-        let duration = properties.duration();
-
-        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
-
-        if let Some(tag) = tag {
-            let mut tag_cover = if tag.picture_count() > 0 {
-                Some(tag.pictures().first().unwrap().data())
-            } else {
-                None
-            };
-
-            let mut final_series : Option<String> = None;
-            let mut final_part : Option<String> = None;
-            let mut final_composer: Option<String> = None;
-            let mut final_genre: Option<String> = None;
-
-            if tag.tag_type() == Mp4Ilst {
-                let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
-                let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
-                tag_cover = if mp4images.len() > 0 {
-                    Some(mp4images.first().unwrap().1.data)
-                } else {
-                    None
-                };
-
-                let tmp_chaps = mp4tag.chapters().iter().rev();
-                let mut end = duration;
-                for tmp_chap in tmp_chaps {
-                let duration = end - tmp_chap.start;
-                chapters.push(MediaSourceChapter::new(tmp_chap.title.clone(), tmp_chap.start, duration));
-                end -= duration;
-                }
-                chapters.reverse();
-
-                // https://github.com/saecki/mp4ameta/issues/35
-                // tag.itunes_string("ASIN");
-                // let artist_ident = Fourcc(*b"\xa9mvmt");
-                // mp4tag.movement()
-
-                let movement = mp4tag.movement();
-                let movement_index = mp4tag.movement_index();
-                let final_composer = mp4tag.composer();
-
-                // mp4tag.artist_sort_order()
-                let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
-                let series = mp4tag.strings_of(&series_indent).next();
-                let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
-                let part = mp4tag.strings_of(&part_indent).next();
-                let genre = mp4tag.genre().map(String::from);
-                // let series_part = format!("{} {}", series, part);
-
-                if series.is_some() {
-                    final_series = series.map(|s| s.to_string());
-                } else if movement.is_some() {
-                    final_series = movement.map(|s| s.to_string());
-                }
-
-                if part.is_some() {
-                    final_part = part.map(|s| s.to_string());
-                } else if movement_index.is_some() {
-                    final_part = movement_index.map(|s| s.to_string());
-                }
-
-            }
-
-            return Ok(MediaSourceMetadata::new(
-                tag.artist().map(|s| s.to_string()),
-                tag.title().map(|s| s.to_string()),
-                tag.album().map(|s| s.to_string()),
-
-                final_composer,
-                final_series,
-                final_part,
-                final_genre,
-                chapters))
-        }
-
-        Ok(MediaSourceMetadata::new(None, None, None, None, None, None, None,vec![]))
-    }
-
     fn map_media_source_to_orm_media_type(&self, media_type: MediaType) -> item::MediaType {
         match media_type {
             MediaType::Audiobook => item::MediaType::Audiobook,
@@ -478,6 +353,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         );
 
 
+        // todo: handle pictures
         let mut tag_cover = if tag.picture_count() > 0 {
             Some(tag.pictures().first().unwrap().data())
         } else {
@@ -520,7 +396,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
         let movement = mp4tag.movement();
         let movement_index = mp4tag.movement_index();
-        let final_composer = mp4tag.composer();
+        meta.composer = mp4tag.composer().map(|s| s.to_string());
 
         // mp4tag.artist_sort_order()
         let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
