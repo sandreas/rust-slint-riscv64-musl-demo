@@ -98,7 +98,9 @@ pub enum MediaSourceImageCodec {
 #[derive(Debug, Clone)]
 pub struct MediaSourcePicture {
     pub location: String,
+    pub hash: u64,
     pub encoding: MediaSourceImageCodec,
+    
 }
 
 impl MediaSourceChapter {

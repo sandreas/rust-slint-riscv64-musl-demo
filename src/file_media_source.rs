@@ -17,17 +17,19 @@ use std::time::Duration;
 use image::{load_from_memory, DynamicImage, GenericImageView};
 use image::imageops::FilterType;
 use lofty::picture::MimeType;
+use lofty::picture::PictureType::Media;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use crate::entity::item::{ActiveModel, ActiveModelEx};
-use crate::entity::items_metadata;
+use crate::entity::{items_metadata, items_pictures, picture};
 use crate::entity::items_metadata::{Entity, TagField};
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
 use sea_orm::prelude::HasMany;
 use xxhash_rust::xxh3::xxh3_64;
 use crate::entity::items_metadata::TagField::{*};
+use crate::entity::picture::ImageCodec;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -201,6 +203,28 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Series, meta.series.clone(), now);
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
+        for pic in meta.pictures {
+            let encoding = match pic.encoding {
+                MediaSourceImageCodec::Png => ImageCodec::Png,
+                MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
+                MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
+                MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
+                MediaSourceImageCodec::Gif => ImageCodec::Gif,
+                _ => ImageCodec::Unknown,
+            };
+            let picture_model = picture::ActiveModel::builder()
+                .set_location(pic.location)
+                .set_hash(pic.hash)
+                .set_encoding(encoding)
+                .set_date_modified(now);
+            let pic_save_result = picture_model.save(&db).await;
+
+            if pic_save_result.is_ok() {
+                result.pictures.push(pic_save_result.unwrap());
+            }
+        }
+
+
         let res = result.save(&db).await;
 
         res.unwrap()
@@ -214,6 +238,7 @@ impl FileMediaSource {
                 .set_date_modified(date_modified));
         }
     }
+
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
@@ -428,53 +453,80 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         }
     }
 
-    fn mime_to_ext(&self, mime_type_opt: Option<&MimeType>) -> String {
-        let unknown_ext = String::from("dat");
-        if let Some(mime_type) = mime_type_opt {
-            let result = match mime_type {
-                MimeType::Png => String::from("png"),
-                MimeType::Jpeg => String::from("jpg"),
-                MimeType::Tiff => String::from("tif"),
-                MimeType::Bmp => String::from("jpg"),
-                MimeType::Gif => String::from("gif"),
+
+    fn medias_source_image_codec_to_ext(&self, codec:MediaSourceImageCodec) -> String {
+            let unknown_ext = String::from("dat");
+        match codec {
+            MediaSourceImageCodec::Png => String::from("png"),
+            MediaSourceImageCodec::Jpeg => String::from("jpg"),
+            MediaSourceImageCodec::Tiff => String::from("tif"),
+            MediaSourceImageCodec::Bmp => String::from("jpg"),
+            MediaSourceImageCodec::Gif => String::from("gif"),
                 _ => unknown_ext.clone()
-            };
-            return result;
-        }
-        unknown_ext.clone()
+            }
+
+    }
+
+    fn pic_full_path(&self, hash:u64, codec: MediaSourceImageCodec) -> String {
+        let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
+        let first_char = hash_hex.chars().next().unwrap();
+        let pic_ext = self.medias_source_image_codec_to_ext(codec);
+        let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
+        let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
+
+        let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
+        let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
+        let pic_path = Path::new(&pic_path_str);
+        let pic_full_path = pic_path.join(&pic_filename);
+        let tb_full_path = pic_path.join(&pic_filename_small);
+
+        pic_path_str
     }
 
     async fn extract_pictures(&self, tag: &Tag) -> Result<Vec<MediaSourcePicture>, LoftyError> {
         let mut pics: Vec<MediaSourcePicture> = Vec::new();
 
         for pic in tag.pictures() {
+            // todo: use self.pic_full_path (refactoring required)
+            // probably implement location() on MediaSourcePicture to return the full path
+            // and tb_location for the thumbnail?
+
             let hash = xxh3_64(&pic.data());
             let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
 
 
+            let codec = mime_to_codec(pic.mime_type());
             let first_char = hash_hex.chars().next().unwrap();
-            let pic_ext = self.mime_to_ext(pic.mime_type());
+            let pic_ext = self.medias_source_image_codec_to_ext(codec);
             let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
             let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
 
-            let location = format!("{}{}/{}/", self.rel_cache_path(), "img", first_char);
+            let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
             let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
             let pic_path = Path::new(&pic_path_str);
 
             let pic_full_path = pic_path.join(&pic_filename);
             let tb_full_path = pic_path.join(&pic_filename_small);
 
+
+
             fs::create_dir_all(pic_path_str.clone())?;
 
-            let file = File::create(pic_full_path)?;
-            let mut writer = BufWriter::new(file);
-            writer.write_all(&pic.data())?;
-            writer.flush()?;  // Ensure all data is written
+            let pic_full_path_exists = pic_full_path.exists();
+            if !pic_full_path_exists {
+                let file = File::create(pic_full_path)?;
+                let mut writer = BufWriter::new(file);
+                writer.write_all(&pic.data())?;
+                writer.flush()?;  // Ensure all data is written
+            }
 
-            resize_image_bytes_to_file(&pic.data(), &tb_full_path, 128, 128);
+            if !tb_full_path.exists() && pic_full_path_exists{
+                resize_image_bytes_to_file(&pic.data(), &tb_full_path, 128, 128);
+            }
 
             pics.push(MediaSourcePicture {
                 location,
+                hash,
                 encoding: self.map_encoding(pic.mime_type())
             });
         }
@@ -656,4 +708,20 @@ fn resize_keep_aspect(image: &DynamicImage, max_width: u32, max_height: u32) -> 
     };
 
     image.resize_exact(target_width, target_height, FilterType::Lanczos3)
+}
+
+fn mime_to_codec( mime_type_opt: Option<&MimeType>) -> MediaSourceImageCodec {
+    let unknown_ext = String::from("dat");
+    if let Some(mime_type) = mime_type_opt {
+        let result = match mime_type {
+            MimeType::Png => MediaSourceImageCodec::Png,
+            MimeType::Jpeg => MediaSourceImageCodec::Jpeg,
+            MimeType::Tiff => MediaSourceImageCodec::Tiff,
+            MimeType::Bmp => MediaSourceImageCodec::Jpeg,
+            MimeType::Gif => MediaSourceImageCodec::Gif,
+            _ => MediaSourceImageCodec::Unknown
+        };
+        return result;
+    }
+    MediaSourceImageCodec::Unknown
 }

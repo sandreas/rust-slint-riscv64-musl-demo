@@ -5,14 +5,16 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum ImageCodec {
     #[sea_orm(num_value = 0)]
-    Png,
+    Unknown,
     #[sea_orm(num_value = 1)]
     Jpeg,
     #[sea_orm(num_value = 2)]
-    Tiff,
+    Png,
     #[sea_orm(num_value = 3)]
-    Bmp,
+    Tiff,
     #[sea_orm(num_value = 4)]
+    Bmp,
+    #[sea_orm(num_value = 5)]
     Gif,
 }
 
