@@ -1,18 +1,22 @@
 use crate::item;
-use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
+use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceImageCodec, MediaSourceItem, MediaSourceMetadata, MediaSourcePicture, MediaType, ReadableSeeker};
 use async_trait::async_trait;
 use chrono::{DateTime, Local, Utc};
 use lofty::error::LoftyError;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
-use lofty::tag::Accessor;
+use lofty::tag::{Accessor, Tag};
 use lofty::tag::TagType::Mp4Ilst;
 use std::ffi::OsStr;
-use std::io;
-use std::io::{BufReader, Read};
+use std::{fs, io};
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Error, Read, Write};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use image::{load_from_memory, DynamicImage, GenericImageView};
+use image::imageops::FilterType;
+use lofty::picture::MimeType;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
@@ -22,6 +26,7 @@ use crate::entity::items_metadata::{Entity, TagField};
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
 use sea_orm::prelude::HasMany;
+use xxhash_rust::xxh3::xxh3_64;
 use crate::entity::items_metadata::TagField::{*};
 
 #[derive(Clone)]
@@ -106,6 +111,7 @@ impl FileMediaSource {
             series: None,
             part: None,
             chapters: vec![],
+            pictures: vec![],
         }
     }
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
@@ -142,6 +148,7 @@ impl FileMediaSource {
                 series,
                 part,
                 chapters: vec![],
+                pictures: vec![],
             },
         }
     }
@@ -210,9 +217,13 @@ impl FileMediaSource {
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
-        let cache_path = format!("{}/cache/", inner.base_path.trim_end_matches('/').to_string());
+        let cache_path = format!("{}/{}", self.rel_cache_path(), inner.base_path.trim_end_matches('/').to_string());
         drop(inner);
         cache_path
+    }
+
+    fn rel_cache_path(&self) -> String {
+        String::from("cache/")
     }
 
     pub async fn scan_media(&self) {
@@ -349,16 +360,14 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             tag.artist().map(|s| s.to_string()),
             tag.title().map(|s| s.to_string()),
             tag.album().map(|s| s.to_string()),
-            None, None, None, None,vec![]
+            None,
+            None,
+            None,
+            None,
+            vec![],
+            vec![]
         );
-
-
-        // todo: handle pictures
-        let mut tag_cover = if tag.picture_count() > 0 {
-            Some(tag.pictures().first().unwrap().data())
-        } else {
-            None
-        };
+        media_source_metadata.pictures = self.extract_pictures(tag).await?;
 
         if tag.tag_type() == Mp4Ilst {
             self.extract_mp4_metadata(&mut media_source_metadata, path.clone(), duration);
@@ -417,6 +426,74 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         } else if movement_index.is_some() {
             meta.part = movement_index.map(|s| s.to_string());
         }
+    }
+
+    fn mime_to_ext(&self, mime_type_opt: Option<&MimeType>) -> String {
+        let unknown_ext = String::from("dat");
+        if let Some(mime_type) = mime_type_opt {
+            let result = match mime_type {
+                MimeType::Png => String::from("png"),
+                MimeType::Jpeg => String::from("jpg"),
+                MimeType::Tiff => String::from("tif"),
+                MimeType::Bmp => String::from("jpg"),
+                MimeType::Gif => String::from("gif"),
+                _ => unknown_ext.clone()
+            };
+            return result;
+        }
+        unknown_ext.clone()
+    }
+
+    async fn extract_pictures(&self, tag: &Tag) -> Result<Vec<MediaSourcePicture>, LoftyError> {
+        let mut pics: Vec<MediaSourcePicture> = Vec::new();
+
+        for pic in tag.pictures() {
+            let hash = xxh3_64(&pic.data());
+            let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
+
+
+            let first_char = hash_hex.chars().next().unwrap();
+            let pic_ext = self.mime_to_ext(pic.mime_type());
+            let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
+            let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
+
+            let location = format!("{}{}/{}/", self.rel_cache_path(), "img", first_char);
+            let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
+            let pic_path = Path::new(&pic_path_str);
+
+            let pic_full_path = pic_path.join(&pic_filename);
+            let tb_full_path = pic_path.join(&pic_filename_small);
+
+            fs::create_dir_all(pic_path_str.clone())?;
+
+            let file = File::create(pic_full_path)?;
+            let mut writer = BufWriter::new(file);
+            writer.write_all(&pic.data())?;
+            writer.flush()?;  // Ensure all data is written
+
+            resize_image_bytes_to_file(&pic.data(), &tb_full_path, 128, 128);
+
+            pics.push(MediaSourcePicture {
+                location,
+                encoding: self.map_encoding(pic.mime_type())
+            });
+        }
+
+        Ok(pics)
+    }
+
+    fn map_encoding(&self, p0: Option<&MimeType>) -> MediaSourceImageCodec {
+        if p0.is_some() && let Some(mime_type) = p0 {
+            return match mime_type {
+                MimeType::Png => MediaSourceImageCodec::Png,
+                MimeType::Jpeg => MediaSourceImageCodec::Jpeg,
+                MimeType::Tiff => MediaSourceImageCodec::Tiff,
+                MimeType::Bmp => MediaSourceImageCodec::Bmp,
+                MimeType::Gif => MediaSourceImageCodec::Gif,
+                _ => MediaSourceImageCodec::Unknown
+            }
+        }
+        MediaSourceImageCodec::Unknown
     }
 }
 
@@ -505,3 +582,78 @@ impl MediaSource for FileMediaSource {
     }
 }
 
+fn resize_image_bytes_to_file(
+    image_bytes: &[u8],
+    output_path: &Path,
+    max_width: u32,
+    max_height: u32
+) -> Result<(), Box<dyn std::error::Error>> {
+    let img = load_from_memory(image_bytes)?;
+
+    let (width, height) = img.dimensions();
+    if width <= max_width && height <= max_height {
+        img.save(output_path);
+        return Ok(());
+    }
+
+    let aspect = width as f32 / height as f32;
+    let target_width = (max_height as f32 * aspect).min(max_width as f32) as u32;
+    let target_height = (max_width as f32 / aspect).min(max_height as f32) as u32;
+
+    let resized = img.resize(target_width, target_height, FilterType::Lanczos3);
+    resized.save(output_path)?;
+
+    Ok(())
+}
+
+/*
+fn process_image_bytes(
+    input_bytes: &[u8],
+    max_width: u32,
+    max_height: u32
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let resized = resize_image_bytes(input_bytes, max_width, max_height)?;
+
+    // Save to bytes (PNG format)
+    let mut output_bytes = Vec::new();
+    resized.write_to(&mut output_bytes, image::ImageOutputFormat::Png)?;
+
+    Ok(output_bytes)
+}
+*/
+
+fn resize_image_bytes(
+    image_bytes: &[u8],
+    max_width: u32,
+    max_height: u32
+) -> Result<DynamicImage, image::ImageError> {
+    let img = load_from_memory(image_bytes)?;
+
+    let (width, height) = img.dimensions();
+    if width <= max_width && height <= max_height {
+        return Ok(img);
+    }
+
+    let aspect = width as f32 / height as f32;
+    let target_width = (max_height as f32 * aspect).min(max_width as f32) as u32;
+    let target_height = (max_width as f32 / aspect).min(max_height as f32) as u32;
+
+    Ok(img.resize(target_width, target_height, FilterType::Lanczos3))
+}
+
+fn resize_keep_aspect(image: &DynamicImage, max_width: u32, max_height: u32) -> DynamicImage {
+    let (width, height) = image.dimensions();
+    let aspect = width as f32 / height as f32;
+
+    let new_width = (max_height as f32 * aspect) as u32;
+    let new_height = (max_width as f32 / aspect) as u32;
+
+    // Choose dimensions that fit within bounds
+    let (target_width, target_height) = if new_width <= max_width {
+        (new_width, max_height)
+    } else {
+        (max_width, new_height)
+    };
+
+    image.resize_exact(target_width, target_height, FilterType::Lanczos3)
+}

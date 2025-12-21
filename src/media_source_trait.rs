@@ -2,8 +2,10 @@ use std::io;
 use std::io::{BufReader, Read, Seek};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use chrono::Utc;
+use sea_orm::compound::HasMany;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-
+use crate::entity::picture::ImageCodec;
 
 // Supertrait combining both
 pub trait ReadableSeeker: Read + Seek {}
@@ -48,6 +50,7 @@ pub struct MediaSourceMetadata {
     pub series: Option<String>,
     pub part: Option<String>,
     pub chapters: Vec<MediaSourceChapter>,
+    pub pictures: Vec<MediaSourcePicture>,
 }
 
 impl MediaSourceMetadata {
@@ -58,7 +61,8 @@ impl MediaSourceMetadata {
                series: Option<String>,
                part: Option<String>,
                genre: Option<String>,
-               chapters: Vec<MediaSourceChapter>) -> Self {
+               chapters: Vec<MediaSourceChapter>,
+    pictures: Vec<MediaSourcePicture>) -> Self {
         Self {
             artist,
             title,
@@ -68,6 +72,7 @@ impl MediaSourceMetadata {
             series,
             part,
             chapters,
+            pictures,
         }
     }
 }
@@ -77,6 +82,23 @@ pub struct MediaSourceChapter {
     pub name: String,
     pub start: Duration,
     pub duration: Duration,
+}
+
+
+#[derive(Debug, Clone)]
+pub enum MediaSourceImageCodec {
+    Unknown,
+    Jpeg,
+    Png,
+    Tiff,
+    Bmp,
+    Gif,
+}
+
+#[derive(Debug, Clone)]
+pub struct MediaSourcePicture {
+    pub location: String,
+    pub encoding: MediaSourceImageCodec,
 }
 
 impl MediaSourceChapter {

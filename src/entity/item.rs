@@ -34,6 +34,9 @@ pub struct Model {
     #[sea_orm(has_many)]
     pub metadata: HasMany<super::items_metadata::Entity>,
 
+    #[sea_orm(has_many)]
+    pub json: HasMany<super::items_json_metadata::Entity>,
+
     #[sea_orm(has_many, via = "items_pictures")]
     pub pictures: HasMany<super::picture::Entity>,
 
