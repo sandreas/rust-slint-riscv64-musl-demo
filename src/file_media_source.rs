@@ -12,6 +12,7 @@ use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
@@ -95,7 +96,18 @@ impl FileMediaSource {
         }
     }
 
-
+    pub fn empty_metadata(&self) -> MediaSourceMetadata {
+        MediaSourceMetadata {
+            artist: None,
+            title: None,
+            album: None,
+            genre: None,
+            composer: None,
+            series: None,
+            part: None,
+            chapters: vec![],
+        }
+    }
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
         let mut genre : Option<String> = None;
         let mut title : String = i.location.clone();
@@ -275,26 +287,16 @@ impl FileMediaSource {
             };
 
             if item_is_modified {
-                let empty_meta = MediaSourceMetadata {
-                    artist: None,
-                    title: None,
-                    album: None,
-                    genre: None,
-                    composer: None,
-                    series: None,
-                    part: None,
-                    chapters: vec![],
-                };
                 // file_name_without_ext
                 let mut item_meta_result = self.extract_metadata(full_path.clone()).await;
                 if item_meta_result.is_err() {
-                    item_meta_result = Ok(empty_meta.clone());
+                    item_meta_result = Ok(self.empty_metadata());
                 }
-                println!("item is modified");
+                // println!("item is modified");
                 let item_meta = if let Ok(meta) = item_meta_result {
                     meta
                 } else {
-                    empty_meta.clone()
+                    self.empty_metadata()
                 };
                 let i = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), item_meta).await;
             } else {
@@ -436,7 +438,10 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         }
     }
 
+
+
     async fn extract_metadata(&self, path: String) -> Result<MediaSourceMetadata, LoftyError> {
+
         /*
 let read_cfg = ReadConfig {
 read_meta_items: true,
@@ -450,7 +455,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
  */
 
         let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
-        let tag = match tagged_file.primary_tag() {
+        let tag_result = match tagged_file.primary_tag() {
             Some(primary_tag) => Some(primary_tag),
             // If the "primary" tag doesn't exist, we just grab the
             // first tag we can find. Realistically, a tag reader would likely
@@ -460,88 +465,83 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
         let properties = tagged_file.properties();
         let duration = properties.duration();
-        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
 
-        if let Some(tag) = tag {
-            let mut tag_cover = if tag.picture_count() > 0 {
-                Some(tag.pictures().first().unwrap().data())
-            } else {
-                None
-            };
-
-            let mut final_series : Option<String> = None;
-            let mut final_part : Option<String> = None;
-            let mut final_composer: Option<String> = None;
-            let mut final_genre: Option<String> = None;
-
-            if tag.tag_type() == Mp4Ilst {
-                let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
-                let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
-                tag_cover = if mp4images.len() > 0 {
-                    Some(mp4images.first().unwrap().1.data)
-                } else {
-                    None
-                };
-
-                let tmp_chaps = mp4tag.chapters().iter().rev();
-                let mut end = duration;
-                for tmp_chap in tmp_chaps {
-                    let duration = end - tmp_chap.start;
-                    chapters.push(MediaSourceChapter::new(tmp_chap.title.clone(), tmp_chap.start, duration));
-                    end -= duration;
-                }
-                chapters.reverse();
-
-                // https://github.com/saecki/mp4ameta/issues/35
-                // tag.itunes_string("ASIN");
-                // let artist_ident = Fourcc(*b"\xa9mvmt");
-                // mp4tag.movement()
-
-                // composer = ©wrt => Fourcc(*b"\xa9wrt")
+        if tag_result.is_none() {
+            return Ok(self.empty_metadata());
+        }
+        let tag = tag_result.unwrap();
+        let mut media_source_metadata = MediaSourceMetadata::new(
+            tag.artist().map(|s| s.to_string()),
+            tag.title().map(|s| s.to_string()),
+            tag.album().map(|s| s.to_string()),
+            None, None, None, None,vec![]
+        );
 
 
-                let movement = mp4tag.movement();
-                let movement_index = mp4tag.movement_index();
-                let final_composer = mp4tag.composer();
+        let mut tag_cover = if tag.picture_count() > 0 {
+            Some(tag.pictures().first().unwrap().data())
+        } else {
+            None
+        };
 
-                // mp4tag.artist_sort_order()
-                let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
-                let series = mp4tag.strings_of(&series_indent).next();
-                let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
-                let part = mp4tag.strings_of(&part_indent).next();
-                final_genre = mp4tag.genre().map(String::from);
-                // let series_part = format!("{} {}", series, part);
-
-                if series.is_some() {
-                    final_series = series.map(|s| s.to_string());
-                } else if movement.is_some() {
-                    final_series = movement.map(|s| s.to_string());
-                }
-
-                if part.is_some() {
-                    final_part = part.map(|s| s.to_string());
-                } else if movement_index.is_some() {
-                    final_part = movement_index.map(|s| s.to_string());
-                }
-
-            }
-
-            return Ok(MediaSourceMetadata::new(
-                tag.artist().map(|s| s.to_string()),
-                tag.title().map(|s| s.to_string()),
-                tag.album().map(|s| s.to_string()),
-
-                final_composer,
-                final_series,
-                final_part,
-                final_genre,
-                chapters))
+        if tag.tag_type() == Mp4Ilst {
+            self.extract_mp4_metadata(&mut media_source_metadata, path.clone(), duration);
         }
 
-        Ok(MediaSourceMetadata::new(None, None, None, None, None, None, None,vec![]))
+        Ok(media_source_metadata)
     }
 
+    fn extract_mp4_metadata(&self, meta: &mut MediaSourceMetadata, path: String, duration: Duration) {
+        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
+        let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
+        let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
+        let tag_cover = if mp4images.len() > 0 {
+            Some(mp4images.first().unwrap().1.data)
+        } else {
+            None
+        };
 
+        let tmp_chaps = mp4tag.chapters().iter().rev();
+        let mut end = duration;
+        for tmp_chap in tmp_chaps {
+            let duration = end - tmp_chap.start;
+            chapters.push(MediaSourceChapter::new(tmp_chap.title.clone(), tmp_chap.start, duration));
+            end -= duration;
+        }
+        chapters.reverse();
+        meta.chapters = chapters;
+        // https://github.com/saecki/mp4ameta/issues/35
+        // tag.itunes_string("ASIN");
+        // let artist_ident = Fourcc(*b"\xa9mvmt");
+        // mp4tag.movement()
+
+        // composer = ©wrt => Fourcc(*b"\xa9wrt")
+
+
+        let movement = mp4tag.movement();
+        let movement_index = mp4tag.movement_index();
+        let final_composer = mp4tag.composer();
+
+        // mp4tag.artist_sort_order()
+        let series_indent = FreeformIdent::new_static("com.pilabor.tone", "SERIES");
+        let series = mp4tag.strings_of(&series_indent).next();
+        let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
+        let part = mp4tag.strings_of(&part_indent).next();
+        meta.genre = mp4tag.genre().map(String::from);
+        // let series_part = format!("{} {}", series, part);
+
+        if series.is_some() {
+            meta.series = series.map(|s| s.to_string());
+        } else if movement.is_some() {
+            meta.series = movement.map(|s| s.to_string());
+        }
+
+        if part.is_some() {
+            meta.part = part.map(|s| s.to_string());
+        } else if movement_index.is_some() {
+            meta.part = movement_index.map(|s| s.to_string());
+        }
+    }
 }
 
 #[async_trait]
