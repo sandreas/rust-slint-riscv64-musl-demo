@@ -204,7 +204,7 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
         for pic in meta.pictures {
-            let encoding = match pic.encoding {
+            let encoding = match pic.codec {
                 MediaSourceImageCodec::Png => ImageCodec::Png,
                 MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
                 MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
@@ -213,7 +213,6 @@ impl FileMediaSource {
                 _ => ImageCodec::Unknown,
             };
             let picture_model = picture::ActiveModel::builder()
-                .set_location(pic.location)
                 .set_hash(pic.hash)
                 .set_encoding(encoding)
                 .set_date_modified(now);
@@ -474,7 +473,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
         let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
 
-        let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
+        // let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
         let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
         let pic_path = Path::new(&pic_path_str);
         let pic_full_path = pic_path.join(&pic_filename);
@@ -492,10 +491,20 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             // and tb_location for the thumbnail?
 
             let hash = xxh3_64(&pic.data());
+            let codec = mime_to_codec(pic.mime_type());
+
+            let media_source_picture = MediaSourcePicture {
+                hash,
+                codec: self.map_encoding(pic.mime_type())
+            };
+
+
+
+            /*
+
             let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
 
 
-            let codec = mime_to_codec(pic.mime_type());
             let first_char = hash_hex.chars().next().unwrap();
             let pic_ext = self.medias_source_image_codec_to_ext(codec);
             let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
@@ -507,9 +516,11 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
             let pic_full_path = pic_path.join(&pic_filename);
             let tb_full_path = pic_path.join(&pic_filename_small);
+            */
 
-
-
+            let pic_path_str = media_source_picture.path(self.cache_path());
+            let pic_full_path = media_source_picture.pic_full_path(self.cache_path());
+            let tb_full_path = media_source_picture.tb_full_path(self.cache_path());
             fs::create_dir_all(pic_path_str.clone())?;
 
             let pic_full_path_exists = pic_full_path.exists();
@@ -524,15 +535,12 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 resize_image_bytes_to_file(&pic.data(), &tb_full_path, 128, 128);
             }
 
-            pics.push(MediaSourcePicture {
-                location,
-                hash,
-                encoding: self.map_encoding(pic.mime_type())
-            });
+            pics.push(media_source_picture);
         }
 
         Ok(pics)
     }
+
 
     fn map_encoding(&self, p0: Option<&MimeType>) -> MediaSourceImageCodec {
         if p0.is_some() && let Some(mime_type) = p0 {

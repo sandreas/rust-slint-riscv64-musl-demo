@@ -24,9 +24,7 @@ pub enum ImageCodec {
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-
-    pub location: String,  // file path or URL
-
+    
     pub hash: u64,
 
     pub encoding: ImageCodec,
