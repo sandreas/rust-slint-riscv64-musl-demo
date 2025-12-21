@@ -6,15 +6,22 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(rs_type = "i32", db_type = "Integer")]
 pub enum TagField {
     #[sea_orm(num_value = 0)]
-    Title,
+    Genre,
     #[sea_orm(num_value = 1)]
     Artist,
     #[sea_orm(num_value = 2)]
-    Album,
+    Title,
     #[sea_orm(num_value = 3)]
-    Genre,
-    // extend as needed
+    Album,
+    #[sea_orm(num_value = 4)]
+    Composer,
+    #[sea_orm(num_value = 5)]
+    Series,
+    #[sea_orm(num_value = 6)]
+    Part,
 }
+
+
 
 #[sea_orm::model]
 #[derive(DeriveEntityModel, Clone, Debug, PartialEq)]

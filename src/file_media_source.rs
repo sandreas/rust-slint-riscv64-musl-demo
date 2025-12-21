@@ -1,7 +1,7 @@
 use crate::item;
 use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourceMetadata, MediaType, ReadableSeeker};
 use async_trait::async_trait;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use lofty::error::LoftyError;
 use lofty::file::{AudioFile, TaggedFileExt};
 use lofty::probe::Probe;
@@ -17,11 +17,11 @@ use walkdir::WalkDir;
 
 use crate::entity::item::{ActiveModel, ActiveModelEx};
 use crate::entity::items_metadata;
-use crate::entity::items_metadata::TagField;
+use crate::entity::items_metadata::{Entity, TagField};
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
 use sea_orm::prelude::HasMany;
-use crate::entity::items_metadata::TagField::Album;
+use crate::entity::items_metadata::TagField::{*};
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -97,17 +97,23 @@ impl FileMediaSource {
 
 
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
+        let mut genre : Option<String> = None;
         let mut title : String = i.location.clone();
         let mut artist : Option<String> = None;
         let mut album : Option<String> = None;
-        let mut genre : Option<String> = None;
+        let mut composer : Option<String> = None;
+        let mut series : Option<String> = None;
+        let mut part : Option<String> = None;
 
         for tag in metadata {
             match tag.tag_field {
-                TagField::Title => title = tag.value.clone(),
-                TagField::Artist => artist = Some(tag.value.clone()),
-                TagField::Album => album = Some(tag.value.clone()),
-                TagField::Genre => genre = Some(tag.value.clone()),
+                Genre => genre = Some(tag.value.clone()),
+                Title => title = tag.value.clone(),
+                Artist => artist = Some(tag.value.clone()),
+                Album => album = Some(tag.value.clone()),
+                Composer => composer = Some(tag.value.clone()),
+                Series => series = Some(tag.value.clone()),
+                Part => part = Some(tag.value.clone()),
             };
         }
 
@@ -120,9 +126,9 @@ impl FileMediaSource {
                 artist,
                 album,
                 genre,
-                composer: None,
-                series: None,
-                part: None,
+                composer,
+                series,
+                part,
                 chapters: vec![],
             },
         }
@@ -134,11 +140,9 @@ impl FileMediaSource {
         // todo: improve this
         // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
         let db = self.db.clone();
+        let now = Utc::now();
 
-        let now = chrono::offset::Utc::now();
-
-        // let meta_vec = Active
-
+        // if id == 0 insert, otherwise update
         let builder = if id == 0 {
             ActiveModel::builder()
                 .set_file_id(file_id)
@@ -146,6 +150,7 @@ impl FileMediaSource {
                 .set_location(location.trim_start_matches('/'))
                 .set_last_scan_random_key("")
                 .set_date_modified(now)
+                //.add_metadatum(metadata_items)
 
         } else {
             ActiveModel::builder()
@@ -155,29 +160,40 @@ impl FileMediaSource {
                 .set_location(location.trim_start_matches('/'))
                 .set_last_scan_random_key("")
                 .set_date_modified(now)
+
         };
 
-        /*
-        if meta.album.is_some() {
-            builder_ref.add_metadatum(
-                items_metadata::ActiveModel::builder()
-                    .set_tag_field(Album)
-                    .set_value(meta.album.unwrap())
-            );
-        }
-        */
 
-
-        let result = builder
+        let mut result = builder
             // .add_metadatum()
             // .add_picture()
             // .add_progress_history()
-
             .save(&db)
             .await
             .expect("todo");
-        result
 
+
+        // now sync the metadata
+        self.add_metadata(&mut result.metadata, Genre, meta.genre.clone(), now);
+        self.add_metadata(&mut result.metadata, Artist, meta.artist.clone(), now);
+        self.add_metadata(&mut result.metadata, Title, meta.title.clone(), now);
+        self.add_metadata(&mut result.metadata, Album, meta.album.clone(), now);
+        self.add_metadata(&mut result.metadata, Composer, meta.composer.clone(), now);
+        self.add_metadata(&mut result.metadata, Series, meta.series.clone(), now);
+        self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
+
+        let res = result.save(&db).await;
+
+        res.unwrap()
+    }
+
+    fn add_metadata(&self, metadata: &mut HasManyModel<Entity>, tag_field: TagField, value: Option<String>, date_modified: DateTime<Utc>) {
+        if value.is_some() {
+            metadata.push(items_metadata::ActiveModel::builder()
+                .set_tag_field(Album)
+                .set_value(value.unwrap())
+                .set_date_modified(date_modified));
+        }
     }
 
     fn cache_path(&self) -> String {
@@ -252,8 +268,8 @@ impl FileMediaSource {
                 .one(&db)
                 .await;
 
-            let (item_is_modified, id) = if let Ok(item) = item_result && let Some(i) = item {
-                (i.date_modified < file_date_mod_compare, i.id)
+            let (item_is_modified, id) = if let Ok(item) = item_result && let Some(ix) = item {
+                (ix.date_modified < file_date_mod_compare, ix.id)
             } else {
                 (true, 0)
             };
@@ -421,25 +437,19 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
     }
 
     async fn extract_metadata(&self, path: String) -> Result<MediaSourceMetadata, LoftyError> {
-        let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
         /*
-        let tagged_file = Probe::open(path)
-            .expect("ERROR: Bad path provided!")
-            .read()
-            .expect("ERROR: Failed to read file!");
-        */
-
-        /*
-        let read_cfg = ReadConfig {
-    read_meta_items: true,
-    read_image_data: false,
-    read_chapter_list: false,
-    read_chapter_track: false,
-    read_audio_info: false,
-    chpl_timescale: ChplTimescale::DEFAULT,
+let read_cfg = ReadConfig {
+read_meta_items: true,
+read_image_data: false,
+read_chapter_list: false,
+read_chapter_track: false,
+read_audio_info: false,
+chpl_timescale: ChplTimescale::DEFAULT,
 };
 let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
-         */
+ */
+
+        let tagged_file = Probe::open(path.clone())?.guess_file_type()?.read()?;
         let tag = match tagged_file.primary_tag() {
             Some(primary_tag) => Some(primary_tag),
             // If the "primary" tag doesn't exist, we just grab the
@@ -450,7 +460,6 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
         let properties = tagged_file.properties();
         let duration = properties.duration();
-
         let mut chapters: Vec<MediaSourceChapter> = Vec::new();
 
         if let Some(tag) = tag {
@@ -488,6 +497,9 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 // let artist_ident = Fourcc(*b"\xa9mvmt");
                 // mp4tag.movement()
 
+                // composer = ©wrt => Fourcc(*b"\xa9wrt")
+
+
                 let movement = mp4tag.movement();
                 let movement_index = mp4tag.movement_index();
                 let final_composer = mp4tag.composer();
@@ -497,7 +509,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 let series = mp4tag.strings_of(&series_indent).next();
                 let part_indent = FreeformIdent::new_static("com.pilabor.tone", "PART");
                 let part = mp4tag.strings_of(&part_indent).next();
-                let genre = mp4tag.genre().map(String::from);
+                final_genre = mp4tag.genre().map(String::from);
                 // let series_part = format!("{} {}", series, part);
 
                 if series.is_some() {
@@ -528,6 +540,8 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
 
         Ok(MediaSourceMetadata::new(None, None, None, None, None, None, None,vec![]))
     }
+
+
 }
 
 #[async_trait]
