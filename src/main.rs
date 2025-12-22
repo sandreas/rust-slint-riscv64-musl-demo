@@ -23,9 +23,9 @@ use crate::entity::{item, items_json_metadata, items_metadata, items_progress_hi
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString, VecModel};
 use std::iter;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -335,13 +335,39 @@ fn option_to_slint_cover(option: &Option<MediaSourcePicture>) -> (SharedString, 
     }
 }
 
+/*
+fn load_cover_with_fallback(cover_path: &str/*, fallback: &str*/) -> (slint::Image, bool) {
+    let  cover_result = slint::Image::load_from_path(Path::new(cover_path));
+
+    if let Ok(cover) = cover_result {
+        return (cover, true)
+    }
+
+    // todo: implement fallback image
+    /*
+    let fallback_result =  slint::Image::load_from_path(Path::new(cover_path));
+    if let Ok(fallback) = fallback_result {
+        return (fallback, false)
+    }
+
+     */
+    (slint::Image::from_rgb8(SharedPixelBuffer::<Rgb8Pixel>::new(320, 200)), false)
+}
+*/
 fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
     // Create VecModel directly
     let model = VecModel::<SlintMediaSourceItem>::from(
         rust_items
             .into_iter()
             .map(|rust_item| {
-                let (cover, thumbnail) = option_to_slint_cover(&rust_item.metadata.cover);
+                let (cover_path, thumbnail_path) = option_to_slint_cover(&rust_item.metadata.cover);
+                /*
+                let (cover, cover_loaded) = load_cover_with_fallback(&cover_path);
+                let (thumbnail, thumbnail_loaded) = load_cover_with_fallback(&thumbnail_path);
+
+
+                let has_cover = cover_loaded && thumbnail_loaded;
+                */
                 SlintMediaSourceItem {
                     id: rust_item.id.clone().into(),
                     media_type: convert_media_type_to_int(&rust_item.media_type),
@@ -352,8 +378,14 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
                     composer: option_to_slint_string(&rust_item.metadata.composer),
                     series: option_to_slint_string(&rust_item.metadata.series),
                     part: option_to_slint_string(&rust_item.metadata.part),
+                    cover: cover_path,
+                    thumbnail: thumbnail_path,
+                    /*
+                    has_cover,
                     cover,
                     thumbnail,
+
+                     */
                 }
             })
             .collect::<Vec<_>>(),

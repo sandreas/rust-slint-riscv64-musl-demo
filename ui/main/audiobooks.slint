@@ -43,8 +43,12 @@ export component Audiobooks {
                 PiListItem {
                     height:80px;
                     title: item.name;
-                    subtitle: "#1 - Whatever";
-                    description: "Autor - Sprecher";
+                    subtitle: item.series + " " + item.part;
+                    description: item.artist;
+                    /*
+                    has-icon: item.has-cover;
+                    icon: item.thumbnail;
+                    */
                     clicked => {
                         SlintAudioPlayer.play_media(item.id);
                     }
