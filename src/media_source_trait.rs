@@ -92,6 +92,7 @@ pub enum MediaSourceImageCodec {
     Tiff,
     Bmp,
     Gif,
+    WebP,
 }
 
 #[derive(Debug, Clone)]
@@ -108,16 +109,16 @@ impl MediaSourcePicture {
         format!("{}/{}/{}/{}/", cache_dir.trim_end_matches('/'), "img", first_char, second_char)
     }
 
-    pub fn pic_full_path(&self, cache_dir:String) -> PathBuf {
-        PathBuf::from(self.internal_file(cache_dir,String::from("")))
+    pub fn pic_full_path(&self, cache_dir:String, ext: String) -> PathBuf {
+        PathBuf::from(self.internal_file(cache_dir,String::from(""), ext))
     }
 
-    pub fn tb_full_path(&self, cache_dir:String) -> PathBuf {
-        PathBuf::from(self.internal_file(cache_dir,String::from("tb.")))
+    pub fn tb_full_path(&self, cache_dir:String, ext: String) -> PathBuf {
+        PathBuf::from(self.internal_file(cache_dir,String::from("tb."), ext))
     }
 
-    fn internal_file(&self, cache_dir:String, suffix: String) -> String {
-        let pic_ext = self.medias_source_image_codec_to_ext(&self.codec);
+    fn internal_file(&self, cache_dir:String, suffix: String, pic_ext: String) -> String {
+        // let pic_ext = self.medias_source_image_codec_to_ext(&self.codec);
         let path = self.path(cache_dir);
 
         let pic_filename = format!("{}.{}{}", &self.hash.to_string(), suffix, pic_ext);

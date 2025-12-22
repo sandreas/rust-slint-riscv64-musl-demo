@@ -327,45 +327,7 @@ impl FileMediaSource {
                     self.empty_metadata()
                 };
 
-
-                // INSERT INTO "pictures" ("hash", "codec", "date_modified") VALUES (16601657817183584017, 1, '2025-12-22 08:15:58.110775 +00:00') RETURNING "id", "hash", "codec", "date_modified"
-                let now = Utc::now();
-
-                /*
-                let mut pic_save_results: Vec<picture::ActiveModelEx> = Vec::new();
-                for pic in &item_meta.pictures {
-                    let codec = match pic.codec {
-                        MediaSourceImageCodec::Png => ImageCodec::Png,
-                        MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
-                        MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
-                        MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
-                        MediaSourceImageCodec::Gif => ImageCodec::Gif,
-                        _ => ImageCodec::Unknown,
-                    };
-                    let picture_model = picture::ActiveModel::builder()
-                        .set_hash(&pic.hash)
-                        .set_codec(codec)
-                        .set_date_modified(now);
-
-                    let pic_save_result = picture_model.save(&db).await;
-
-                    println!("xx");
-
-                    if let Ok(pic_save) = pic_save_result {
-                        pic_save_results.push(pic_save)
-                    }
-
-                }
-                */
                 let result_model = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), &item_meta).await;
-
-
-
-
-
-
-
-
             } else {
                 println!("item NOT modified");
             }
@@ -534,42 +496,20 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
                 codec: self.map_encoding(pic.mime_type())
             };
 
-
-
-            /*
-
-            let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
-
-
-            let first_char = hash_hex.chars().next().unwrap();
-            let pic_ext = self.medias_source_image_codec_to_ext(codec);
-            let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
-            let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
-
-            let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
-            let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
-            let pic_path = Path::new(&pic_path_str);
-
-            let pic_full_path = pic_path.join(&pic_filename);
-            let tb_full_path = pic_path.join(&pic_filename_small);
-            */
-
-            let cache_path = self.cache_path();
+            // we will always use webp for thumbnails and images
+            let pic_ext = String::from("jpg");
             let pic_path_str = media_source_picture.path(self.cache_path());
-            let pic_full_path = media_source_picture.pic_full_path(self.cache_path());
-            let tb_full_path = media_source_picture.tb_full_path(self.cache_path());
+            let pic_full_path = media_source_picture.pic_full_path(self.cache_path(), pic_ext.clone());
+            let tb_full_path = media_source_picture.tb_full_path(self.cache_path(), pic_ext.clone());
             fs::create_dir_all(pic_path_str.clone())?;
 
             let pic_full_path_exists = pic_full_path.exists();
             if !pic_full_path_exists {
-                let file = File::create(pic_full_path)?;
-                let mut writer = BufWriter::new(file);
-                writer.write_all(&pic.data())?;
-                writer.flush()?;  // Ensure all data is written
+                resize_image_bytes_to_file(&pic.data(), &pic_full_path, 368, 368);
             }
 
-            if !tb_full_path.exists() && pic_full_path_exists{
-                resize_image_bytes_to_file(&pic.data(), &tb_full_path, 128, 128);
+            if !tb_full_path.exists() {
+                resize_image_bytes_to_file(&pic.data(), &tb_full_path, 192, 192);
             }
 
             pics.push(media_source_picture);
@@ -686,10 +626,10 @@ fn resize_image_bytes_to_file(
     max_height: u32
 ) -> Result<(), Box<dyn std::error::Error>> {
     let img = load_from_memory(image_bytes)?;
-
+    let img_format =  image::ImageFormat::Jpeg;
     let (width, height) = img.dimensions();
     if width <= max_width && height <= max_height {
-        img.save(output_path);
+        img.save_with_format(output_path, img_format)?;
         return Ok(());
     }
 
@@ -698,7 +638,7 @@ fn resize_image_bytes_to_file(
     let target_height = (max_width as f32 / aspect).min(max_height as f32) as u32;
 
     let resized = img.resize(target_width, target_height, FilterType::Lanczos3);
-    resized.save(output_path)?;
+    resized.save_with_format(output_path, img_format)?;
 
     Ok(())
 }
