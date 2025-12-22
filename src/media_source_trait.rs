@@ -98,14 +98,13 @@ pub enum MediaSourceImageCodec {
 
 #[derive(Debug, Clone)]
 pub struct MediaSourcePicture {
-    pub hash: u64,
+    pub hash: String,
     pub codec: MediaSourceImageCodec,
 }
 
 impl MediaSourcePicture {
     pub fn path(&self, cache_dir: String) -> String {
-        let hash_hex = format!("{:016x}", self.hash); // 16 chars, lowercase, zero-padded
-        let first_char = hash_hex.chars().next().unwrap();
+        let first_char = self.hash.chars().next().unwrap();
         format!("{}/{}/{}/", cache_dir.trim_end_matches('/'), "img", first_char)
     }
 
@@ -118,11 +117,10 @@ impl MediaSourcePicture {
     }
 
     fn internal_file(&self, cache_dir:String, suffix: String) -> String {
-        let hash_hex = format!("{:016x}", self.hash); // 16 chars, lowercase, zero-padded
         let pic_ext = self.medias_source_image_codec_to_ext(&self.codec);
         let path = self.path(cache_dir);
 
-        let pic_filename = format!("{}.{}{}", &hash_hex.to_string(), suffix, pic_ext);
+        let pic_filename = format!("{}.{}{}", &self.hash.to_string(), suffix, pic_ext);
 
         format!("{}{}", path, pic_filename)
     }
@@ -137,7 +135,6 @@ impl MediaSourcePicture {
             MediaSourceImageCodec::Gif => String::from("gif"),
             _ => unknown_ext.clone()
         }
-
     }
 
 }

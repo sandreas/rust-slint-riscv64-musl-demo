@@ -24,10 +24,10 @@ pub enum ImageCodec {
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
-    
-    pub hash: u64,
 
-    pub encoding: ImageCodec,
+    pub hash: String, // todo: probably this wont work, use string instead?
+
+    pub codec: ImageCodec,
 
     pub date_modified: chrono::DateTime<Utc>,
 

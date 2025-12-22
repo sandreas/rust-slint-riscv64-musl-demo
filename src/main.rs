@@ -25,10 +25,11 @@ use std::iter;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-
+use chrono::Utc;
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
 use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, picture, items_progress_history};
+use crate::entity::picture::ImageCodec;
 use crate::file_media_source::FileMediaSource;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 use crate::migrator::Migrator;
@@ -96,6 +97,17 @@ async fn main() -> Result<(), slint::PlatformError> {
     }
 
     let db = connect_result.unwrap();
+
+    /*
+    // this works
+    let now = Utc::now();
+    let picture_model = picture::ActiveModel::builder()
+        .set_hash(16601657817183584017u64)
+        .set_codec(ImageCodec::Jpeg)
+        .set_date_modified(now);
+    picture_model.save(&db).await.unwrap();
+    */
+
     // let settings_manager = SettingsManager::new(db.clone());
 
 

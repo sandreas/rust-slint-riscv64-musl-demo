@@ -157,11 +157,37 @@ impl FileMediaSource {
 
 
 
-    async fn upsert_item(&self, id: i32, file_id: String, media_type: item::MediaType, location: String, meta: MediaSourceMetadata) -> ActiveModelEx {
+    async fn upsert_item(&self, id: i32, file_id: String, media_type: item::MediaType, location: String, meta: &MediaSourceMetadata) -> ActiveModelEx {
         // todo: improve this
         // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
         let db = self.db.clone();
         let now = Utc::now();
+
+
+        // this somehow does not work
+        let mut pic_save_results: Vec<picture::ActiveModelEx> = Vec::new();
+        for pic in &meta.pictures {
+            let codec = match pic.codec {
+                MediaSourceImageCodec::Png => ImageCodec::Png,
+                MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
+                MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
+                MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
+                MediaSourceImageCodec::Gif => ImageCodec::Gif,
+                _ => ImageCodec::Unknown,
+            };
+            let picture_model = picture::ActiveModel::builder()
+                .set_hash(&pic.hash)
+                .set_codec(codec)
+                .set_date_modified(now);
+
+            let pic_save_result = picture_model.save(&db).await;
+            if let Ok(pic_save) = pic_save_result {
+                pic_save_results.push(pic_save)
+            }
+
+        }
+
+
 
         // if id == 0 insert, otherwise update
         let builder = if id == 0 {
@@ -203,24 +229,9 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Series, meta.series.clone(), now);
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
-        for pic in meta.pictures {
-            let encoding = match pic.codec {
-                MediaSourceImageCodec::Png => ImageCodec::Png,
-                MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
-                MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
-                MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
-                MediaSourceImageCodec::Gif => ImageCodec::Gif,
-                _ => ImageCodec::Unknown,
-            };
-            let picture_model = picture::ActiveModel::builder()
-                .set_hash(pic.hash)
-                .set_encoding(encoding)
-                .set_date_modified(now);
-            let pic_save_result = picture_model.save(&db).await;
 
-            if pic_save_result.is_ok() {
-                result.pictures.push(pic_save_result.unwrap());
-            }
+        for r in pic_save_results {
+            result.pictures.push(r);
         }
 
 
@@ -333,7 +344,46 @@ impl FileMediaSource {
                 } else {
                     self.empty_metadata()
                 };
-                let i = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), item_meta).await;
+
+
+                // INSERT INTO "pictures" ("hash", "codec", "date_modified") VALUES (16601657817183584017, 1, '2025-12-22 08:15:58.110775 +00:00') RETURNING "id", "hash", "codec", "date_modified"
+                let now = Utc::now();
+
+                /*
+                let mut pic_save_results: Vec<picture::ActiveModelEx> = Vec::new();
+                for pic in &item_meta.pictures {
+                    let codec = match pic.codec {
+                        MediaSourceImageCodec::Png => ImageCodec::Png,
+                        MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
+                        MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
+                        MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
+                        MediaSourceImageCodec::Gif => ImageCodec::Gif,
+                        _ => ImageCodec::Unknown,
+                    };
+                    let picture_model = picture::ActiveModel::builder()
+                        .set_hash(&pic.hash)
+                        .set_codec(codec)
+                        .set_date_modified(now);
+
+                    let pic_save_result = picture_model.save(&db).await;
+
+                    println!("xx");
+
+                    if let Ok(pic_save) = pic_save_result {
+                        pic_save_results.push(pic_save)
+                    }
+
+                }
+                */
+                let result_model = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), &item_meta).await;
+
+
+
+
+
+
+
+
             } else {
                 println!("item NOT modified");
             }
@@ -490,7 +540,8 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             // probably implement location() on MediaSourcePicture to return the full path
             // and tb_location for the thumbnail?
 
-            let hash = xxh3_64(&pic.data());
+            let hash_u64 = xxh3_64(&pic.data());
+            let hash = format!("{:016x}", hash_u64); // 16 chars, lowercase, zero-padded
             let codec = mime_to_codec(pic.mime_type());
 
             let media_source_picture = MediaSourcePicture {
