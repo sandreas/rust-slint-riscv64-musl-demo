@@ -19,17 +19,16 @@ struct Args {
     base_directory: String,
 }
 
+use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
 use crate::player::{Player, PlayerCommand, PlayerEvent};
+use sea_orm::{Database, DatabaseConnection, DbErr};
+use sea_orm_migration::MigratorTrait;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use chrono::Utc;
-use sea_orm::{Database, DatabaseConnection, DbErr};
-use sea_orm_migration::MigratorTrait;
-use crate::entity::{item, items_json_metadata, items_metadata, items_pictures, picture, items_progress_history};
-use crate::entity::picture::ImageCodec;
+
 use crate::file_media_source::FileMediaSource;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
 use crate::migrator::Migrator;
@@ -50,8 +49,6 @@ async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection,
             .register(item::Entity)
             .register(items_metadata::Entity)
             .register(items_json_metadata::Entity)
-            .register(picture::Entity)
-            .register(items_pictures::Entity)
             .register(items_progress_history::Entity)
             .apply(&db)
             .await?;

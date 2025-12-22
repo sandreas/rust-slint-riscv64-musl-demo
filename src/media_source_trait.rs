@@ -3,10 +3,7 @@ use std::io::{BufReader, Read, Seek};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use chrono::Utc;
-use sea_orm::compound::HasMany;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use crate::entity::picture::ImageCodec;
 
 // Supertrait combining both
 pub trait ReadableSeeker: Read + Seek {}
@@ -50,8 +47,8 @@ pub struct MediaSourceMetadata {
     pub composer: Option<String>,
     pub series: Option<String>,
     pub part: Option<String>,
+    pub cover: Option<MediaSourcePicture>,
     pub chapters: Vec<MediaSourceChapter>,
-    pub pictures: Vec<MediaSourcePicture>,
 }
 
 impl MediaSourceMetadata {
@@ -62,8 +59,9 @@ impl MediaSourceMetadata {
                series: Option<String>,
                part: Option<String>,
                genre: Option<String>,
-               chapters: Vec<MediaSourceChapter>,
-    pictures: Vec<MediaSourcePicture>) -> Self {
+               cover: Option<MediaSourcePicture>,
+               chapters: Vec<MediaSourceChapter>
+    ) -> Self {
         Self {
             artist,
             title,
@@ -72,8 +70,8 @@ impl MediaSourceMetadata {
             composer,
             series,
             part,
+            cover,
             chapters,
-            pictures,
         }
     }
 }
@@ -104,8 +102,10 @@ pub struct MediaSourcePicture {
 
 impl MediaSourcePicture {
     pub fn path(&self, cache_dir: String) -> String {
-        let first_char = self.hash.chars().next().unwrap();
-        format!("{}/{}/{}/", cache_dir.trim_end_matches('/'), "img", first_char)
+        let mut chars = self.hash.chars();
+        let first_char = chars.next().unwrap();
+        let second_char = chars.next().unwrap();
+        format!("{}/{}/{}/{}/", cache_dir.trim_end_matches('/'), "img", first_char, second_char)
     }
 
     pub fn pic_full_path(&self, cache_dir:String) -> PathBuf {

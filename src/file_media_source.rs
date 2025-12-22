@@ -22,14 +22,13 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use crate::entity::item::{ActiveModel, ActiveModelEx};
-use crate::entity::{items_metadata, items_pictures, picture};
+use crate::entity::{items_metadata};
 use crate::entity::items_metadata::{Entity, TagField};
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
 use sea_orm::prelude::HasMany;
 use xxhash_rust::xxh3::xxh3_64;
 use crate::entity::items_metadata::TagField::{*};
-use crate::entity::picture::ImageCodec;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -112,8 +111,8 @@ impl FileMediaSource {
             composer: None,
             series: None,
             part: None,
+            cover: None,
             chapters: vec![],
-            pictures: vec![],
         }
     }
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
@@ -124,7 +123,10 @@ impl FileMediaSource {
         let mut composer : Option<String> = None;
         let mut series : Option<String> = None;
         let mut part : Option<String> = None;
-
+        let mut cover = Some(MediaSourcePicture {
+            hash: i.cover_hash.clone(),
+            codec: MediaSourceImageCodec::Jpeg
+        });
         for tag in metadata {
             match tag.tag_field {
                 Genre => genre = Some(tag.value.clone()),
@@ -149,8 +151,8 @@ impl FileMediaSource {
                 composer,
                 series,
                 part,
+                cover,
                 chapters: vec![],
-                pictures: vec![],
             },
         }
     }
@@ -162,30 +164,13 @@ impl FileMediaSource {
         // see https://www.sea-ql.org/blog/2025-11-25-sea-orm-2.0/
         let db = self.db.clone();
         let now = Utc::now();
+        let cover = meta.cover.clone();
 
-
-        // this somehow does not work
-        let mut pic_save_results: Vec<picture::ActiveModelEx> = Vec::new();
-        for pic in &meta.pictures {
-            let codec = match pic.codec {
-                MediaSourceImageCodec::Png => ImageCodec::Png,
-                MediaSourceImageCodec::Jpeg =>ImageCodec ::Jpeg,
-                MediaSourceImageCodec::Tiff =>ImageCodec ::Tiff,
-                MediaSourceImageCodec::Bmp => ImageCodec::Bmp,
-                MediaSourceImageCodec::Gif => ImageCodec::Gif,
-                _ => ImageCodec::Unknown,
-            };
-            let picture_model = picture::ActiveModel::builder()
-                .set_hash(&pic.hash)
-                .set_codec(codec)
-                .set_date_modified(now);
-
-            let pic_save_result = picture_model.save(&db).await;
-            if let Ok(pic_save) = pic_save_result {
-                pic_save_results.push(pic_save)
-            }
-
-        }
+        let cover_hash = if cover.is_some() {
+            cover.unwrap().hash
+        } else {
+            String::from("")
+        };
 
 
 
@@ -195,6 +180,7 @@ impl FileMediaSource {
                 .set_file_id(file_id)
                 .set_media_type(media_type)
                 .set_location(location.trim_start_matches('/'))
+                .set_cover_hash(cover_hash)
                 .set_last_scan_random_key("")
                 .set_date_modified(now)
                 //.add_metadatum(metadata_items)
@@ -205,6 +191,7 @@ impl FileMediaSource {
                 .set_file_id(file_id)
                 .set_media_type(media_type)
                 .set_location(location.trim_start_matches('/'))
+                .set_cover_hash(cover_hash)
                 .set_last_scan_random_key("")
                 .set_date_modified(now)
 
@@ -230,11 +217,6 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
 
-        for r in pic_save_results {
-            result.pictures.push(r);
-        }
-
-
         let res = result.save(&db).await;
 
         res.unwrap()
@@ -252,7 +234,7 @@ impl FileMediaSource {
 
     fn cache_path(&self) -> String {
         let inner = self.state.lock().unwrap();
-        let cache_path = format!("{}/{}", self.rel_cache_path(), inner.base_path.trim_end_matches('/').to_string());
+        let cache_path = format!("{}/{}", inner.base_path.trim_end_matches('/').to_string(), self.rel_cache_path());
         drop(inner);
         cache_path
     }
@@ -434,14 +416,17 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             tag.artist().map(|s| s.to_string()),
             tag.title().map(|s| s.to_string()),
             tag.album().map(|s| s.to_string()),
-            None,
-            None,
-            None,
-            None,
-            vec![],
-            vec![]
+            None, // composer
+            None, // series
+            None, // part
+            None, // genre
+            None, // cover
+            vec![], // chapters
         );
-        media_source_metadata.pictures = self.extract_pictures(tag).await?;
+        let pictures = self.extract_pictures(tag).await?;
+        if pictures.len() > 0 {
+            media_source_metadata.cover = Some(pictures[0].clone());
+        }
 
         if tag.tag_type() == Mp4Ilst {
             self.extract_mp4_metadata(&mut media_source_metadata, path.clone(), duration);
@@ -569,6 +554,7 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             let tb_full_path = pic_path.join(&pic_filename_small);
             */
 
+            let cache_path = self.cache_path();
             let pic_path_str = media_source_picture.path(self.cache_path());
             let pic_full_path = media_source_picture.pic_full_path(self.cache_path());
             let tb_full_path = media_source_picture.tb_full_path(self.cache_path());

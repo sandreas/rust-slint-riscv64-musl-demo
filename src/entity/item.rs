@@ -23,6 +23,8 @@ pub struct Model {
 
     pub media_type: MediaType,
 
+    pub cover_hash: String,
+    
     pub location: String,
 
     // this key is randomly generated on every "full scan" and each item gets updated
@@ -37,8 +39,7 @@ pub struct Model {
     #[sea_orm(has_many)]
     pub json: HasMany<super::items_json_metadata::Entity>,
 
-    #[sea_orm(has_many, via = "items_pictures")]
-    pub pictures: HasMany<super::picture::Entity>,
+
 
     #[sea_orm(has_many)]
     pub progress_history: HasMany<super::items_progress_history::Entity>,
