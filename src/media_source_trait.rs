@@ -1,6 +1,5 @@
 use std::io;
 use std::io::{BufReader, Read, Seek};
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -97,29 +96,29 @@ pub enum MediaSourceImageCodec {
 
 #[derive(Debug, Clone)]
 pub struct MediaSourcePicture {
+    pub cache_dir: String,
     pub hash: String,
     pub codec: MediaSourceImageCodec,
 }
 
 impl MediaSourcePicture {
-    pub fn path(&self, cache_dir: String) -> String {
+    pub fn path(&self) -> String {
         let mut chars = self.hash.chars();
         let first_char = chars.next().unwrap();
         let second_char = chars.next().unwrap();
-        format!("{}/{}/{}/{}/", cache_dir.trim_end_matches('/'), "img", first_char, second_char)
+        format!("{}/{}/{}/{}/", self.cache_dir.trim_end_matches('/'), "img", first_char, second_char)
     }
 
-    pub fn pic_full_path(&self, cache_dir:String, ext: String) -> PathBuf {
-        PathBuf::from(self.internal_file(cache_dir,String::from(""), ext))
+    pub fn pic_full_path(&self, ext: String) -> String {
+        self.internal_file(String::from(""), ext)
     }
 
-    pub fn tb_full_path(&self, cache_dir:String, ext: String) -> PathBuf {
-        PathBuf::from(self.internal_file(cache_dir,String::from("tb."), ext))
+    pub fn tb_full_path(&self, ext: String) -> String {
+        self.internal_file(String::from("tb."), ext)
     }
 
-    fn internal_file(&self, cache_dir:String, suffix: String, pic_ext: String) -> String {
-        // let pic_ext = self.medias_source_image_codec_to_ext(&self.codec);
-        let path = self.path(cache_dir);
+    fn internal_file(&self, suffix: String, pic_ext: String) -> String {
+        let path = self.path();
 
         let pic_filename = format!("{}.{}{}", &self.hash.to_string(), suffix, pic_ext);
 

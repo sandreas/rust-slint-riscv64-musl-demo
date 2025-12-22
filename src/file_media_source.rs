@@ -11,7 +11,7 @@ use std::ffi::OsStr;
 use std::{fs, io};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Error, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use image::{load_from_memory, DynamicImage, GenericImageView};
@@ -123,7 +123,8 @@ impl FileMediaSource {
         let mut composer : Option<String> = None;
         let mut series : Option<String> = None;
         let mut part : Option<String> = None;
-        let mut cover = Some(MediaSourcePicture {
+        let cover = Some(MediaSourcePicture {
+            cache_dir: self.cache_path(),
             hash: i.cover_hash.clone(),
             codec: MediaSourceImageCodec::Jpeg
         });
@@ -156,7 +157,6 @@ impl FileMediaSource {
             },
         }
     }
-
 
 
     async fn upsert_item(&self, id: i32, file_id: String, media_type: item::MediaType, location: String, meta: &MediaSourceMetadata) -> ActiveModelEx {
@@ -208,6 +208,7 @@ impl FileMediaSource {
 
 
         // now sync the metadata
+        // todo: handle multi persons with comma separated values
         self.add_metadata(&mut result.metadata, Genre, meta.genre.clone(), now);
         self.add_metadata(&mut result.metadata, Artist, meta.artist.clone(), now);
         self.add_metadata(&mut result.metadata, Title, meta.title.clone(), now);
@@ -492,15 +493,16 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
             let codec = mime_to_codec(pic.mime_type());
 
             let media_source_picture = MediaSourcePicture {
+                cache_dir: self.cache_path(),
                 hash,
                 codec: self.map_encoding(pic.mime_type())
             };
 
             // we will always use webp for thumbnails and images
             let pic_ext = String::from("jpg");
-            let pic_path_str = media_source_picture.path(self.cache_path());
-            let pic_full_path = media_source_picture.pic_full_path(self.cache_path(), pic_ext.clone());
-            let tb_full_path = media_source_picture.tb_full_path(self.cache_path(), pic_ext.clone());
+            let pic_path_str = media_source_picture.path();
+            let pic_full_path = PathBuf::from(media_source_picture.pic_full_path( pic_ext.clone()));
+            let tb_full_path = PathBuf::from(media_source_picture.tb_full_path( pic_ext.clone()));
             fs::create_dir_all(pic_path_str.clone())?;
 
             let pic_full_path_exists = pic_full_path.exists();

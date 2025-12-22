@@ -23,14 +23,14 @@ use crate::entity::{item, items_json_metadata, items_metadata, items_progress_hi
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::iter;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::file_media_source::FileMediaSource;
-use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaType};
+use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
 
 slint::include_modules!();
@@ -314,15 +314,47 @@ fn sync_preferences(pref: SlintPreferences) {
     println!("color-scheme: {}", pref.get_color_scheme());
 }
 
+fn option_to_slint_string(option: &Option<String>) -> SharedString {
+    if option.is_some() {
+        option.as_ref().unwrap().to_shared_string()
+    } else {
+        SharedString::from("")
+    }
+}
+
+fn option_to_slint_cover(option: &Option<MediaSourcePicture>) -> (SharedString, SharedString) {
+    if option.is_some() {
+        let media_source_picture = option.as_ref().unwrap();
+        (
+            media_source_picture.pic_full_path(String::from("jpg")).to_shared_string(),
+            media_source_picture.tb_full_path(String::from("jpg")).to_shared_string(),
+        )
+        
+    } else {
+        (SharedString::from(""), SharedString::from(""))
+    }
+}
+
 fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
     // Create VecModel directly
     let model = VecModel::<SlintMediaSourceItem>::from(
         rust_items
             .into_iter()
-            .map(|rust_item| SlintMediaSourceItem {
-                id: rust_item.id.clone().into(),
-                media_type: convert_media_type_to_int(&rust_item.media_type),
-                name: rust_item.title.clone().into(),
+            .map(|rust_item| {
+                let (cover, thumbnail) = option_to_slint_cover(&rust_item.metadata.cover);
+                SlintMediaSourceItem {
+                    id: rust_item.id.clone().into(),
+                    media_type: convert_media_type_to_int(&rust_item.media_type),
+                    name: rust_item.title.clone().into(),
+                    genre: option_to_slint_string(&rust_item.metadata.genre),
+                    artist: option_to_slint_string(&rust_item.metadata.artist),
+                    album: option_to_slint_string(&rust_item.metadata.album),
+                    composer: option_to_slint_string(&rust_item.metadata.composer),
+                    series: option_to_slint_string(&rust_item.metadata.series),
+                    part: option_to_slint_string(&rust_item.metadata.part),
+                    cover,
+                    thumbnail,
+                }
             })
             .collect::<Vec<_>>(),
     );
