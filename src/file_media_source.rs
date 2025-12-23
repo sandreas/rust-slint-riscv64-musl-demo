@@ -43,57 +43,6 @@ struct FileMediaSourceState {
 
 impl FileMediaSource {
     pub fn new(db: DatabaseConnection, base_path: String) -> Self {
-        /*
-        let audio_extensions = vec!("mp3", "m4b");
-        let cache_path = format!("{}/cache/", base_path.trim_end_matches('/').to_string());
-
-
-        // let music_dir = PathBuf::from(&self.base_path).join("music");
-        // let audiobook_dir = PathBuf::from(&self.base_path).join("audiobooks");
-
-        let items = WalkDir::new(&base_path)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| {
-                let e_clone = e.clone();
-                let metadata = e_clone.metadata().unwrap();
-                if !metadata.is_file() {
-                    return false;
-                }
-                let path = e_clone.into_path();
-                match path.extension() {
-                    Some(ext) => {
-                        return audio_extensions.contains(&ext.to_str().unwrap());
-                    }
-                    None => return false,
-                }
-
-            })
-            .map(|e| {
-                let full_path = e.path().to_str().unwrap().to_string();
-                let start_index = base_path.len();
-                let rel_path = &full_path[start_index..];
-                let media_type = if rel_path.starts_with("/music/") {
-                    MediaType::Music
-                }
-                else if rel_path.starts_with("/audiobooks/") {
-                    MediaType::Audiobook
-                } else {
-                    MediaType::Unspecified
-                };
-
-                let title = e.file_name().to_string_lossy().to_string().chars().take(15).collect();
-                let metadata = Self::load_metadata(cache_path.clone(), full_path.clone());
-                let item = MediaSourceItem {
-                    id: rel_path.to_string(),
-                    media_type,
-                    title,
-                    metadata,
-                };
-                // (item.id.clone(), item) // (key, value) for HashMap
-                item
-            }).collect::<Vec<MediaSourceItem>>();
-        */
         Self {
             db,
             base_path: base_path.clone(),
@@ -117,10 +66,7 @@ impl FileMediaSource {
         }
     }
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
-
-
         let mut title : String = String::from("");
-
         let mut genre : Option<String> = None;
         let mut artist : Option<String> = None;
         let mut album : Option<String> = None;
@@ -154,6 +100,7 @@ impl FileMediaSource {
 
         MediaSourceItem {
             id: i.id.to_string(),
+            location: format!("{}/{}", self.base_path.clone().trim_end_matches('/'), i.location.trim_start_matches('/').to_string()),
             title: title.clone(),
             media_type: MediaType::Unspecified,
             metadata: MediaSourceMetadata {
@@ -603,36 +550,7 @@ impl MediaSource for FileMediaSource {
         }
         None
     }
-
-    async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>> {
-        let inner = self.state.lock().unwrap();
-        let path = format!("{}/{}.ogg", inner.base_path, id);
-        drop(inner);
-        let file = std::fs::File::open(path)?;
-        let buf_reader = BufReader::new(file);
-        Ok(Arc::new(Mutex::new(buf_reader)))
-    }
-
-    async fn locate(&self, id: &str) -> Option<String> {
-        let db = self.db.clone();
-        let items = item::Entity::load()
-            .filter(item::Column::Id.eq(id))
-            .with(items_metadata::Entity)
-            .one(&db)
-            .await;
-
-        if items.is_err() {
-            return None;
-        }
-
-        let items = items.unwrap();
-
-        if let Some(i) = items {
-            return Some(format!("{}/{}", self.base_path.clone().trim_end_matches('/'), i.location.trim_start_matches('/').to_string()))
-        }
-        None
-    }
-
+    
     async fn run(
         mut self,
         mut cmd_rx: UnboundedReceiver<MediaSourceCommand>,

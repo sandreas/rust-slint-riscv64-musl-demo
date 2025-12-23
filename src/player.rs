@@ -109,15 +109,17 @@ impl Player {
             self.toggle();
             return Ok(());
         }
-        let location_option = self.media_source.locate(&id).await;
+
+
+        let item_option = self.media_source.find(&id).await;
         
         
-        if location_option.is_none() {
+        if item_option.is_none() {
             return Ok(());
         }
         
-        let location = location_option.unwrap();
-        let path = Path::new(location.as_str());
+        let item = item_option.unwrap();
+        let path = Path::new(item.location.as_str());
 
         /*
         // todo: this is a dirty hack, because somehow self.media_source.open is more complex to implement to work with rodio

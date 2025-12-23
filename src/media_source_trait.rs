@@ -31,6 +31,7 @@ pub enum MediaType {
 #[derive(Debug, Clone)]
 pub struct MediaSourceItem {
     pub id: String,
+    pub location: String,
     pub title: String,
     pub media_type: MediaType,
     pub metadata: MediaSourceMetadata
@@ -157,9 +158,6 @@ pub trait MediaSource: Send + Sync {
     async fn filter(&self, query: &str) -> Vec<MediaSourceItem>;
     async fn find(&self, id: &str) -> Option<MediaSourceItem>;
 
-    async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>>;
-    
-    async fn locate(&self, id: &str) -> Option<String>;
 
     /// Async run loop - consumes self
     async fn run(
