@@ -9,7 +9,10 @@ import {
 
 import {SlintPreferences, SlintAudioPlayer} from "../globals.slint";
 
+
+
 export component Settings {
+
     VerticalBox {
         alignment: start;
         VerticalBox {
@@ -18,12 +21,19 @@ export component Settings {
             }
 
             Slider {
+                // maybe has-focus would be better to enable / disable gestures
                 value <=> SlintPreferences.brightness;
                 step: 0.01;
                 minimum: 0.01;
                 maximum: 1;
+
+
                 changed value => {
+                    SlintPreferences.enable-gestures = false;
                     SlintPreferences.sync();
+                }
+                released(value) => {
+                    SlintPreferences.enable-gestures = true;
                 }
             }
         }

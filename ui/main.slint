@@ -23,16 +23,16 @@ import { Details } from "main/details.slint";
 import { Player } from "main/player.slint";
 
 
-
-
-
-
 export component MainWindow inherits Window {
     default-font-family: "Lato";
     default-font-size: 16pt;
 
 
     in-out property <physical-length> swipe-area-width: 50px;
+
+    in-out property <physical-length> cur-pos: 0px;
+    in-out property <physical-length> pressed-pos: 0px;
+
 
     // 368 x 552
     width: 368px;
@@ -45,14 +45,21 @@ export component MainWindow inherits Window {
 
     }
 
-    TouchArea {
-        padding:0px;
+    SwipeGestureHandler {
         x: 0;
         y: 0;
-        width: swipe-area-width;
-        height: 100%;
-        double-clicked => {
-            SlintNavigation.back();
+        width:368px;
+        height:552px;
+        handle-swipe-right: SlintPreferences.enable-gestures;
+        handle-swipe-left: SlintPreferences.enable-gestures;
+        swiped => {
+            if (SlintPreferences.enable-gestures) {
+                if (self.current-position.x > self.pressed-position.x) {
+                    SlintNavigation.back()
+                } else if (self.current-position.x < self.pressed-position.x) {
+                    SlintNavigation.forward()
+                }
+            }
         }
     }
 
@@ -65,19 +72,9 @@ export component MainWindow inherits Window {
         if SlintNavigation.route[0] == "search": Search { }
         if SlintNavigation.route[0] == "details": Details {item-id: SlintNavigation.route[1];}
         if SlintNavigation.route[0] == "player": Player {}
-
     }
 
 
-    TouchArea {
-        padding:0px;
-        x: root.width - swipe-area-width;
-        y: 0;
-        width: swipe-area-width;
-        height: 100%;
-        double-clicked => {
-            SlintNavigation.forward();
-        }
-    }
+
 
 }

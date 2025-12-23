@@ -92,7 +92,10 @@ impl Player {
     }
 
     async fn play_test(&mut self) {
+
         let sink = &self.sink;
+        self.loaded_id = "".to_string();
+        sink.clear();
         let waves = vec!(230f32, 270f32, 330f32,270f32, 230f32);
         for w in waves {
             let source = rodio::source::SineWave::new(w).amplify(0.1);
