@@ -14,7 +14,7 @@ import {
     VerticalBox,
 } from "std-widgets.slint";
 
-import {SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
+import {SlintNavigation, SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
 import { PiListItem } from "../_components/PiListItem.slint";
 
 export component Audiobooks {
@@ -49,7 +49,8 @@ export component Audiobooks {
                     icon: item.thumbnail;
 
                     clicked => {
-                        SlintAudioPlayer.play_media(item.id);
+                        // SlintAudioPlayer.play_media(item.id);
+                        SlintNavigation.goto(["details", item.id])
                     }
                 }
 

@@ -152,7 +152,15 @@ That's it for now, more to come.
 - [ ] Implement the Sync software for the Desktop / Mobile devices
 
 
-# Slint problems
+# Slint
+
+## Questions
+- [ ] How would I achieve an overlay display (e.g. for Volume or Brightness)
+- [ ] Swipe Gestures
+  - How can I have a slider and swipe gestures in the same layout without interference
+  - 
+
+## Issues / Improvements
 - [ ] image can't be checked conditionally in components (if image.is-present: Image {})
 - [ ] There is no Template Component option (ListView { template: MyCustomComponent})
 - [ ] GridLayout does not support for loops
@@ -161,7 +169,6 @@ That's it for now, more to come.
 - [ ] ScrollView has a margin right, regardless of showing scrollbar or not
 - [ ] Element sizes can not be scaled (e.g. Slider or Checkbox)
 - [ ] Something is wrong with the LCD Color, it may be the driver or slint
-- 
 
 # Notes
 - Routing: https://github.com/slint-ui/slint/discussions/6783
@@ -231,90 +238,3 @@ See https://www.sea-ql.org/sea-orm-cookbook/018-raw-and-unprepared.html:q
   - key (string)
   - value (string)
 
-
-Given that I have the following entities:
-
-```rust
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "i32", db_type = "Integer")]
-pub enum MediaType {
-    #[sea_orm(num_value = 0)]
-    Unspecified,
-    #[sea_orm(num_value = 2)]
-    Audiobook,
-    #[sea_orm(num_value = 4)]
-    Music,
-}
-
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "items")]   // plural table name
-pub struct Model {
-    #[sea_orm(primary_key)]
-    pub id: i32,
-
-    pub file_id: String,
-
-    pub media_type: MediaType,
-
-    pub location: String,
-
-    pub name: String,
-
-    pub date_modified: NaiveDateTime,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(has_many = "crate::entity::items_metadata::Entity")]
-    ItemsMetadata,
-}
-
-
-#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum)]
-#[sea_orm(rs_type = "i32", db_type = "Integer")]
-pub enum TagField {
-  #[sea_orm(num_value = 0)]
-  Title,
-  #[sea_orm(num_value = 1)]
-  Artist,
-  #[sea_orm(num_value = 2)]
-  Album,
-  #[sea_orm(num_value = 3)]
-  Genre,
-  // extend as needed
-}
-
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "items_metadata")]
-pub struct Model {
-  #[sea_orm(primary_key)]
-  pub id: i32,
-
-  // Foreign key to items.id
-  pub item_id: i32,
-
-  pub tag_field: TagField,
-
-  pub value: String,
-
-  pub date_modified: NaiveDateTime,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-  #[sea_orm(
-    belongs_to = "super::item::Entity",
-    from = "Column::ItemId",
-    to = "super::item::Column::Id"
-  )]
-  Item,
-}
-
-impl Related<super::item::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Item.def()
-  }
-}
-
-impl ActiveModelBehavior for ActiveModel {}
-```
