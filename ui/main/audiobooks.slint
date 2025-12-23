@@ -45,14 +45,14 @@ export component Audiobooks {
                     title: item.name;
                     subtitle: item.series + " " + item.part;
                     description: item.artist;
-                    /*
                     has-icon: item.has-cover;
                     icon: item.thumbnail;
-                    */
+
                     clicked => {
                         SlintAudioPlayer.play_media(item.id);
                     }
                 }
+
 
         }
 
