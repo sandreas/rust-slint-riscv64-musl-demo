@@ -24,9 +24,9 @@ export component Audiobooks {
         SlintMediaSource.filter("2");
     }
 
+    Flickable {
     VerticalBox {
         padding:0px;
-        padding-left:15px;
 
 
 /*
@@ -38,12 +38,11 @@ export component Audiobooks {
             background: red;
         }
 */
-        ScrollView {
             for item in SlintMediaSource.filter-results:
                 PiListItem {
-                    height:80px;
+                    height:100px;
+                    tagline: "#" + item.part + " - " + item.series;
                     title: item.name;
-                    subtitle: item.series + " " + item.part;
                     description: item.artist;
                     has-icon: item.has-thumbnail;
                     icon: item.thumbnail;
@@ -55,6 +54,7 @@ export component Audiobooks {
 
 
         }
+
 
     }
 }

@@ -4,8 +4,8 @@ export component PiListItem inherits Rectangle {
     callback clicked;
     in-out property <image> icon;
     in-out property <bool> has-icon;
+    in property <string> tagline;
     in property <string> title;
-    in property <string> subtitle;
     in property <string> description;
 
     border-radius: 3px;
@@ -30,20 +30,24 @@ export component PiListItem inherits Rectangle {
             VerticalBox {
                 padding:0px;
                 spacing: 0px;
+
+                if !tagline.is-empty: Text {
+                    font-italic: true;
+                    font-size:0.7rem;
+                    overflow:clip;
+                    text: tagline;
+                }
+
                 if !title.is-empty: Text {
-                    font-size: 1.3rem;
-                    font-weight: 1500;
+                    font-size: 1.0rem;
+                    font-weight: 1200;
                     vertical-alignment: center;
                     overflow:elide;
                     text: title;
                 }
-                if !subtitle.is-empty: Text {
-                    font-size:0.8rem;
-                    overflow:clip;
-                    text: subtitle;
-                }
-                if !description.is-empty: Text {
 
+                if !description.is-empty: Text {
+                    font-size:0.8rem;
                     wrap: word-wrap;
                     text: description;
                 }

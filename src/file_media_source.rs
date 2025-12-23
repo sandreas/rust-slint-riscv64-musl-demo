@@ -185,7 +185,7 @@ impl FileMediaSource {
     fn add_metadata(&self, metadata: &mut HasManyModel<Entity>, tag_field: TagField, value: Option<String>, date_modified: DateTime<Utc>) {
         if value.is_some() {
             metadata.push(items_metadata::ActiveModel::builder()
-                .set_tag_field(Album)
+                .set_tag_field(tag_field)
                 .set_value(value.unwrap())
                 .set_date_modified(date_modified));
         }
@@ -550,7 +550,7 @@ impl MediaSource for FileMediaSource {
         }
         None
     }
-    
+
     async fn run(
         mut self,
         mut cmd_rx: UnboundedReceiver<MediaSourceCommand>,

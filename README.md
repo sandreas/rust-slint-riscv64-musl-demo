@@ -158,7 +158,7 @@ That's it for now, more to come.
 - [ ] How would I achieve an overlay display (e.g. for Volume or Brightness)
 - [ ] Swipe Gestures
   - How can I have a slider and swipe gestures in the same layout without interference
-  - 
+  - Would it be possible to "animate" swipe gestures with sliding in and sliding out depending on the direction?
 
 ## Issues / Improvements
 - [ ] image can't be checked conditionally in components (if image.is-present: Image {})
