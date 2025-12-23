@@ -1,0 +1,25 @@
+// solving lists without gridlayout supporting it: https://github.com/slint-ui/slint/discussions/5422
+// sample slint programs:
+// - https://github.com/Vadoola/Tomotroid
+// - https://github.com/slint-ui/slint/tree/master/demos/home-automation
+
+import {
+    Button,
+    ListView,
+    HorizontalBox,
+    Palette,
+    ScrollView,
+    Slider,
+    Switch,
+    VerticalBox,
+} from "std-widgets.slint";
+
+import {SlintNavigation, SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
+
+export component Player {
+
+    Text {
+        text: "Player";
+    }
+
+}

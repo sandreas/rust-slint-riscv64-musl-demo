@@ -33,6 +33,7 @@ use crate::entity::items_metadata::TagField::{*};
 #[derive(Clone)]
 pub struct FileMediaSource {
     pub db: DatabaseConnection,
+    pub base_path: String,
     state: Arc<Mutex<FileMediaSourceState>>,
 }
 
@@ -95,8 +96,8 @@ impl FileMediaSource {
         */
         Self {
             db,
+            base_path: base_path.clone(),
             state: Arc::new(Mutex::new(FileMediaSourceState {
-
                 base_path
             })),
         }
@@ -116,8 +117,11 @@ impl FileMediaSource {
         }
     }
     pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
+
+
+        let mut title : String = String::from("");
+
         let mut genre : Option<String> = None;
-        let mut title : String = i.location.clone();
         let mut artist : Option<String> = None;
         let mut album : Option<String> = None;
         let mut composer : Option<String> = None;
@@ -128,10 +132,18 @@ impl FileMediaSource {
             hash: i.cover_hash.clone(),
             codec: MediaSourceImageCodec::Jpeg
         });
+        let filename = i.location.split('/').last();
+        if filename.is_some() {
+            let filename_no_ext = filename.unwrap().split('.').next();
+            if filename_no_ext.is_some() {
+                title = filename_no_ext.unwrap().to_string();
+            }
+        }
+
         for tag in metadata {
             match tag.tag_field {
-                Genre => genre = Some(tag.value.clone()),
                 Title => title = tag.value.clone(),
+                Genre => genre = Some(tag.value.clone()),
                 Artist => artist = Some(tag.value.clone()),
                 Album => album = Some(tag.value.clone()),
                 Composer => composer = Some(tag.value.clone()),
@@ -141,7 +153,7 @@ impl FileMediaSource {
         }
 
         MediaSourceItem {
-            id: i.location.to_string(),
+            id: i.id.to_string(),
             title: title.clone(),
             media_type: MediaType::Unspecified,
             metadata: MediaSourceMetadata {
@@ -599,6 +611,26 @@ impl MediaSource for FileMediaSource {
         let file = std::fs::File::open(path)?;
         let buf_reader = BufReader::new(file);
         Ok(Arc::new(Mutex::new(buf_reader)))
+    }
+
+    async fn locate(&self, id: &str) -> Option<String> {
+        let db = self.db.clone();
+        let items = item::Entity::load()
+            .filter(item::Column::Id.eq(id))
+            .with(items_metadata::Entity)
+            .one(&db)
+            .await;
+
+        if items.is_err() {
+            return None;
+        }
+
+        let items = items.unwrap();
+
+        if let Some(i) = items {
+            return Some(format!("{}/{}", self.base_path.clone().trim_end_matches('/'), i.location.trim_start_matches('/').to_string()))
+        }
+        None
     }
 
     async fn run(

@@ -239,14 +239,28 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let slint_media_source = slint_app_window.global::<SlintMediaSource>();
     let slint_media_source_ui = slint_app_window.clone_strong();
-    slint_media_source.on_query({
+    let filter_tx = source_cmd_tx.clone();
+    slint_media_source.on_filter({
         let inner = slint_media_source_ui.global::<SlintMediaSource>();
         inner.set_is_loading(true);
-        inner.set_query_results(ModelRc::default());
+        inner.set_filter_results(ModelRc::default());
         move |query| {
-            source_cmd_tx.send(MediaSourceCommand::Filter(query.to_string())).unwrap();
+            filter_tx.send(MediaSourceCommand::Filter(query.to_string())).unwrap();
         }
     });
+
+
+    let slint_media_source_find_ui = slint_app_window.clone_strong();
+    let find_tx  = source_cmd_tx.clone();
+    slint_media_source.on_find({
+        let inner = slint_media_source_find_ui.global::<SlintMediaSource>();
+        inner.set_is_loading(true);
+        inner.set_find_results(ModelRc::default());
+        move |id| {
+            find_tx.send(MediaSourceCommand::Find(id.to_string())).unwrap();
+        }
+    });
+
 
 
 
@@ -260,16 +274,16 @@ async fn main() -> Result<(), slint::PlatformError> {
 
                 match event {
                     MediaSourceEvent::FilterResults(items) => {
-                        inner.set_query_results(rust_items_to_slint_model(items));
+                        inner.set_filter_results(rust_items_to_slint_model(items));
                     }
                     MediaSourceEvent::FindResult(opt_item) => {
                         if let Some(item) = opt_item {
-                            inner.set_query_results(
+                            inner.set_find_results(
                                 rust_items_to_slint_model(vec![item])
                             );
                         } else {
                             // clear results if nothing found
-                            inner.set_query_results(slint::ModelRc::default());
+                            inner.set_find_results(slint::ModelRc::default());
                         }
                     }
                 }
@@ -362,11 +376,10 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
             .map(|rust_item| {
                 let (cover_path, thumbnail_path) = option_to_slint_cover(&rust_item.metadata.cover);
 
-                let (cover, cover_loaded) = load_cover_with_fallback(&cover_path);
-                let (thumbnail, thumbnail_loaded) = load_cover_with_fallback(&thumbnail_path);
+                let (cover, has_cover) = load_cover_with_fallback(&cover_path);
+                let (thumbnail, has_thumbnail) = load_cover_with_fallback(&thumbnail_path);
 
 
-                let has_cover = cover_loaded && thumbnail_loaded;
 
                 SlintMediaSourceItem {
                     id: rust_item.id.clone().into(),
@@ -380,6 +393,7 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
                     part: option_to_slint_string(&rust_item.metadata.part),
                     has_cover,
                     cover,
+                    has_thumbnail,
                     thumbnail,
 
                 }

@@ -158,6 +158,8 @@ pub trait MediaSource: Send + Sync {
     async fn find(&self, id: &str) -> Option<MediaSourceItem>;
 
     async fn open(&self, id: &str) -> io::Result<Arc<Mutex<BufReader<dyn ReadableSeeker + Send + 'static>>>>;
+    
+    async fn locate(&self, id: &str) -> Option<String>;
 
     /// Async run loop - consumes self
     async fn run(

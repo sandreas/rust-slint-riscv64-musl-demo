@@ -44,19 +44,19 @@ export struct SlintMediaSourceItem {
     part: string,
     // cover: string,
     // thumbnail: string
-
     has-cover: bool,
     cover: image,
+    has-thumbnail: bool,
     thumbnail: image
 
 }
 
 export global SlintMediaSource {
     in-out property <bool> is-loading;
-    in-out property <[SlintMediaSourceItem]> query-results;
-    // in-out property <SlintMediaSourceItem> find-by-id-result;
+    in-out property <[SlintMediaSourceItem]> filter-results;
+    in-out property <[SlintMediaSourceItem]> find-results;
 
-    callback query(mediaType: int);
-    callback findById(id: string);
+    callback filter(query: string);
+    callback find(id: string);
 
 }

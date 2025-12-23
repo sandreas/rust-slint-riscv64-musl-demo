@@ -15,13 +15,28 @@ import {
 } from "std-widgets.slint";
 
 import {SlintNavigation, SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
-import { PiListItem } from "../_components/PiListItem.slint";
 
 export component Details {
     in-out property <string> item-id;
+    in-out property <SlintMediaSourceItem> item;
 
-    Text {
-        text: item-id;
+    init => {
+        SlintMediaSource.find(item-id);
     }
 
+    if SlintMediaSource.find-results.length == 0: Text {
+        text: "No items";
+    }
+    for item in SlintMediaSource.find-results: VerticalBox {
+        Text {
+            text: item.id;
+        }
+
+        Button {
+            text: "Play";
+            clicked => {
+                SlintAudioPlayer.play_media(item.id);
+            }
+        }
+    }
 }

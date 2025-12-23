@@ -21,7 +21,7 @@ export component Audiobooks {
     // in-out property <[SlintMediaSourceItem]> items; // Accepts a model of strings
 
     init => {
-        SlintMediaSource.query(2);
+        SlintMediaSource.filter("2");
     }
 
     VerticalBox {
@@ -39,15 +39,14 @@ export component Audiobooks {
         }
 */
         ScrollView {
-            for item in SlintMediaSource.query-results:
+            for item in SlintMediaSource.filter-results:
                 PiListItem {
                     height:80px;
                     title: item.name;
                     subtitle: item.series + " " + item.part;
                     description: item.artist;
-                    has-icon: item.has-cover;
+                    has-icon: item.has-thumbnail;
                     icon: item.thumbnail;
-
                     clicked => {
                         // SlintAudioPlayer.play_media(item.id);
                         SlintNavigation.goto(["details", item.id])

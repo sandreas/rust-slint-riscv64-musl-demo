@@ -109,14 +109,26 @@ impl Player {
             self.toggle();
             return Ok(());
         }
+        let location_option = self.media_source.locate(&id).await;
+        
+        
+        if location_option.is_none() {
+            return Ok(());
+        }
+        
+        let location = location_option.unwrap();
+        let path = Path::new(location.as_str());
+
+        /*
         // todo: this is a dirty hack, because somehow self.media_source.open is more complex to implement to work with rodio
         let base_dir = self.media_source.id();
-        let relative_dir = id.trim_start_matches('/');
+        let relative_dir = item.location.trim_start_matches('/');
         let path = Path::new(base_dir.as_str()).join(relative_dir);
         if !path.exists() {
             return Ok(()); // todo handle error
         }
-
+        */
+        
         let file = File::open(path)?;
         self.sink.clear();
         self.sink.append(rodio::Decoder::try_from(file).unwrap());
