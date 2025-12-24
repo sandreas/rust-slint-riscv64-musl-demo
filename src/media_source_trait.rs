@@ -2,6 +2,7 @@ use std::io;
 use std::io::{BufReader, Read, Seek};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 // Supertrait combining both
@@ -77,11 +78,16 @@ impl MediaSourceMetadata {
 }
 
 #[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize)]
 pub struct MediaSourceChapter {
     pub name: String,
+    #[serde(with = "crate::serde_json_mods::duration_millis")]
     pub start: Duration,
+    #[serde(with = "crate::serde_json_mods::duration_millis")]
     pub duration: Duration,
 }
+
+
 
 
 #[derive(Debug, Clone)]

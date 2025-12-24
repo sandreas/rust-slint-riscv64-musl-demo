@@ -22,12 +22,13 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use crate::entity::item::{ActiveModel, ActiveModelEx};
-use crate::entity::{items_metadata};
+use crate::entity::{items_json_metadata, items_metadata};
 use crate::entity::items_metadata::{Entity, TagField};
 use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
 use sea_orm::prelude::HasMany;
 use xxhash_rust::xxh3::xxh3_64;
+use crate::entity::items_json_metadata::JsonTagField::Chapters;
 use crate::entity::items_metadata::TagField::{*};
 
 #[derive(Clone)]
@@ -176,6 +177,29 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Series, meta.series.clone(), now);
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
+
+        // let v: Vec<MediaSourceChapter> = serde_json::from_str(data)?;
+        /*
+        // Some data structure.
+        let address = Address {
+            street: "10 Downing Street".to_owned(),
+            city: "London".to_owned(),
+        };
+
+        // Serialize it to a JSON string.
+        let j = serde_json::to_string(&address)?;
+        */
+        if !meta.chapters.is_empty() {
+            let chapters_json_result = serde_json::to_string(&meta.chapters);
+            if let Ok(chapters_json) = chapters_json_result {
+                let chapters_model = items_json_metadata::ActiveModel::builder()
+                    .set_tag_field(Chapters)
+                    .set_value(chapters_json)
+                    .set_date_modified(now);
+                result.json.push(chapters_model);
+            }
+
+        }
 
         let res = result.save(&db).await;
 

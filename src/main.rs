@@ -12,6 +12,8 @@ mod media_source_trait;
 mod migrator;
 mod entity;
 
+pub mod serde_json_mods;
+
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
