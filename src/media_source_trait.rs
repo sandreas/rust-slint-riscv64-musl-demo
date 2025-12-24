@@ -104,7 +104,11 @@ pub struct MediaSourcePicture {
 
 impl MediaSourcePicture {
     pub fn path(&self) -> String {
+        if self.hash.is_empty() {
+            return String::from("");
+        }
         let mut chars = self.hash.chars();
+
         let first_char = chars.next().unwrap();
         let second_char = chars.next().unwrap();
         format!("{}/{}/{}/{}/", self.cache_dir.trim_end_matches('/'), "img", first_char, second_char)
@@ -119,6 +123,9 @@ impl MediaSourcePicture {
     }
 
     fn internal_file(&self, suffix: String, pic_ext: String) -> String {
+        if self.hash.is_empty() {
+            return String::from("");
+        }
         let path = self.path();
 
         let pic_filename = format!("{}.{}{}", &self.hash.to_string(), suffix, pic_ext);

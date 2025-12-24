@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 use clap::Parser;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -28,7 +29,7 @@ use std::iter;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-
+use lofty::picture::PictureType::CoverFront;
 use crate::file_media_source::FileMediaSource;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
@@ -274,12 +275,12 @@ async fn main() -> Result<(), slint::PlatformError> {
 
                 match event {
                     MediaSourceEvent::FilterResults(items) => {
-                        inner.set_filter_results(rust_items_to_slint_model(items));
+                        inner.set_filter_results(rust_items_to_slint_model(items,false));
                     }
                     MediaSourceEvent::FindResult(opt_item) => {
                         if let Some(item) = opt_item {
                             inner.set_find_results(
-                                rust_items_to_slint_model(vec![item])
+                                rust_items_to_slint_model(vec![item], true)
                             );
                         } else {
                             // clear results if nothing found
@@ -348,27 +349,38 @@ fn option_to_slint_cover(option: &Option<MediaSourcePicture>) -> (SharedString, 
         (SharedString::from(""), SharedString::from(""))
     }
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoadCoverResult {
+    Image,
+    Placeholder,
+    None
+}
 
-
-fn load_cover_with_fallback(cover_path: &str/*, fallback: &str*/) -> (slint::Image, bool) {
+fn load_cover_with_fallback(cover_path: &str, media_type:&MediaType) -> (slint::Image, LoadCoverResult) {
     let  cover_result = slint::Image::load_from_path(Path::new(cover_path));
 
     if let Ok(cover) = cover_result {
-        return (cover, true)
+        return (cover, LoadCoverResult::Image)
     }
 
     // todo: implement fallback image
-    /*
-    let fallback_result =  slint::Image::load_from_path(Path::new(cover_path));
-    if let Ok(fallback) = fallback_result {
-        return (fallback, false)
+    let fallback_image_result = match media_type {
+        MediaType::Audiobook => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/audiobooks.svg")),
+        _ => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/music.svg")),
+    };
+    if let Ok(fallback_image) = fallback_image_result {
+        return (fallback_image, LoadCoverResult::Placeholder)
     }
-
-     */
-    (slint::Image::from_rgb8(SharedPixelBuffer::<Rgb8Pixel>::new(320, 200)), false)
+    empty_cover_result()
 }
 
-fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintMediaSourceItem> {
+fn empty_cover_result()-> (slint::Image, LoadCoverResult) {
+    (slint::Image::from_rgb8(SharedPixelBuffer::<Rgb8Pixel>::new(1, 1)), LoadCoverResult::None)
+}
+
+
+
+fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>, details:bool) -> ModelRc<SlintMediaSourceItem> {
     // Create VecModel directly
     let model = VecModel::<SlintMediaSourceItem>::from(
         rust_items
@@ -376,8 +388,15 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
             .map(|rust_item| {
                 let (cover_path, thumbnail_path) = option_to_slint_cover(&rust_item.metadata.cover);
 
-                let (cover, has_cover) = load_cover_with_fallback(&cover_path);
-                let (thumbnail, has_thumbnail) = load_cover_with_fallback(&thumbnail_path);
+                let (thumbnail, thumbnail_type) = load_cover_with_fallback(&thumbnail_path, &rust_item.media_type);
+
+                let (cover, cover_type) = if details {
+                    load_cover_with_fallback(&cover_path, &rust_item.media_type)
+                } else {
+                    empty_cover_result()
+                };
+
+
 
 
 
@@ -391,11 +410,10 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>) -> ModelRc<SlintM
                     composer: option_to_slint_string(&rust_item.metadata.composer),
                     series: option_to_slint_string(&rust_item.metadata.series),
                     part: option_to_slint_string(&rust_item.metadata.part),
-                    has_cover,
+                    has_cover: cover_type != LoadCoverResult::None,
                     cover,
-                    has_thumbnail,
+                    has_thumbnail: thumbnail_type != LoadCoverResult::None,
                     thumbnail,
-
                 }
             })
             .collect::<Vec<_>>(),

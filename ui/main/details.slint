@@ -28,6 +28,9 @@ export component Details {
         text: "No items";
     }
     for item in SlintMediaSource.find-results: VerticalBox {
+        Image {
+            source: item.cover;
+        }
         Text {
             text: item.id;
         }
