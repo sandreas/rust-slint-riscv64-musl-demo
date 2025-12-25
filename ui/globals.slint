@@ -33,7 +33,11 @@ export global SlintPreferences {
     in-out property <bool> enable-gestures: true;
 }
 
-
+export struct SlintMediaSourceChapter {
+    name: string,
+    start: duration,
+    duration: duration,
+}
 
 export struct SlintMediaSourceItem {
     id: string,
@@ -50,8 +54,8 @@ export struct SlintMediaSourceItem {
     has-cover: bool,
     cover: image,
     has-thumbnail: bool,
-    thumbnail: image
-
+    thumbnail: image,
+    chapters: [SlintMediaSourceChapter]
 }
 
 export global SlintMediaSource {

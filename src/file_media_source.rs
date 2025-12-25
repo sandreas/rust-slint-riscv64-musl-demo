@@ -66,7 +66,7 @@ impl FileMediaSource {
             chapters: vec![],
         }
     }
-    pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>) -> MediaSourceItem {
+    pub fn map_db_model_to_media_item(&self, i: &item::ModelEx, metadata: &HasMany<items_metadata::Entity>, json: &HasMany<items_json_metadata::Entity>) -> MediaSourceItem {
         let mut title : String = String::from("");
         let mut genre : Option<String> = None;
         let mut artist : Option<String> = None;
@@ -99,6 +99,19 @@ impl FileMediaSource {
             };
         }
 
+        let mut chapters: Vec<MediaSourceChapter> = Vec::new();
+
+        for json_tag in json {
+            match json_tag.tag_field {
+                Chapters => {
+                    if let Ok(chaps) = serde_json::from_str(&json_tag.value) {
+                        chapters = chaps;
+                    }
+                },
+                _ => {}
+            }
+        }
+
         MediaSourceItem {
             id: i.id.to_string(),
             location: format!("{}/{}", self.base_path.clone().trim_end_matches('/'), i.location.trim_start_matches('/').to_string()),
@@ -113,7 +126,7 @@ impl FileMediaSource {
                 series,
                 part,
                 cover,
-                chapters: vec![],
+                chapters
             },
         }
     }
@@ -549,7 +562,7 @@ impl MediaSource for FileMediaSource {
 
         let items = items.unwrap();
         let result: Vec<MediaSourceItem> = items.iter().map(|i| {
-            self.map_db_model_to_media_item(i, &i.metadata)
+            self.map_db_model_to_media_item(i, &i.metadata, &i.json)
         }).collect();
 
         result
@@ -560,6 +573,7 @@ impl MediaSource for FileMediaSource {
         let items = item::Entity::load()
             .filter(item::Column::Id.eq(id))
             .with(items_metadata::Entity)
+            .with(items_json_metadata::Entity)
             .one(&db)
             .await;
 
@@ -570,7 +584,7 @@ impl MediaSource for FileMediaSource {
         let items = items.unwrap();
 
         if let Some(i) = items {
-            return Some(self.map_db_model_to_media_item(&i, &i.metadata));
+            return Some(self.map_db_model_to_media_item(&i, &i.metadata, &i.json));
         }
         None
     }

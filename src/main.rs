@@ -26,11 +26,12 @@ use crate::entity::{item, items_json_metadata, items_metadata, items_progress_hi
 use crate::player::{Player, PlayerCommand, PlayerEvent};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
-use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, SharedVector, ToSharedString, VecModel};
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 use lofty::picture::PictureType::CoverFront;
 use crate::file_media_source::FileMediaSource;
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
@@ -401,6 +402,21 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>, details:bool) -> 
 
 
 
+                let mut slint_chapters_vec = VecModel::default();
+                for chapter in &rust_item.metadata.chapters {
+                    let start: i64 = chapter.start.as_millis().try_into().expect("Duration too long for u64");
+                    let duration: i64 = chapter.duration.as_millis().try_into().expect("Duration too long for u64");
+
+                    let slint_chapter = SlintMediaSourceChapter {
+                        name: chapter.name.to_shared_string(),
+                        start,
+                        duration,
+                    };
+
+                    slint_chapters_vec.push(slint_chapter);
+                }
+
+                let chapters_model = ModelRc::new(slint_chapters_vec);
 
                 SlintMediaSourceItem {
                     id: rust_item.id.clone().into(),
@@ -416,6 +432,7 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>, details:bool) -> 
                     cover,
                     has_thumbnail: thumbnail_type != LoadCoverResult::None,
                     thumbnail,
+                    chapters: chapters_model,
                 }
             })
             .collect::<Vec<_>>(),
@@ -425,6 +442,9 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>, details:bool) -> 
     ModelRc::from(Rc::new(model))
 }
 
+fn duration_to_millis(duration: Duration) -> Result<u64, &'static str> {
+    duration.as_millis().try_into().map_err(|_| "Duration exceeds u64::MAX ms")
+}
 
 
 fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
@@ -443,3 +463,23 @@ fn convert_int_to_media_type(media_type: i32) -> MediaType {
         _ => MediaType::Unspecified,
     }
 }
+/*
+
+use slint::{SharedArray, SharedString, SharedImage, SharedVector, SharedBool};
+use std::rc::Rc;
+
+fn rust_chapters_to_slint(chapters: Vec<MediaSourceChapter>) -> SharedArray<SlintMediaSourceChapter> {
+    let slint_chapters: Vec<SlintMediaSourceChapter> = chapters
+        .into_iter()
+        .map(|chapter| {
+            SlintMediaSourceChapter::new(
+                Rc::new(chapter.name),  // String → SharedString
+                chapter.start,          // Duration auto-converts (with serde)
+                chapter.duration,       // Duration auto-converts (with serde)
+            )
+        })
+        .collect();
+
+    SharedArray::from(slint_chapters)
+}
+*/
