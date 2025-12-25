@@ -155,7 +155,8 @@ That's it for now, more to come.
 # Slint
 
 ## Questions
-- [ ] How would I achieve an overlay display (e.g. for Volume or Brightness)
+- [ ] Where is the reference of the offical elements?
+- [ ] How would I achieve an overlay display (e.g. for Volume or Brightness
 - [ ] Swipe Gestures
   - How can I have a slider and swipe gestures in the same layout without interference
   - Would it be possible to "animate" swipe gestures with sliding in and sliding out depending on the direction?
@@ -169,6 +170,7 @@ That's it for now, more to come.
 - [ ] ScrollView has a margin right, regardless of showing scrollbar or not
 - [ ] Element sizes can not be scaled (e.g. Slider or Checkbox)
 - [ ] Something is wrong with the LCD Color, it may be the driver or slint
+- [ ] Inertial scrolling
 
 # Notes
 - Routing: https://github.com/slint-ui/slint/discussions/6783

@@ -17,6 +17,7 @@ import {
 import {SlintNavigation, SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
 
 export component Details {
+
     in-out property <string> item-id;
     in-out property <SlintMediaSourceItem> item;
 
@@ -24,32 +25,45 @@ export component Details {
         SlintMediaSource.find(item-id);
     }
 
-    if SlintMediaSource.find-results.length == 0: Text {
-        text: "No items";
-    }
-    for item in SlintMediaSource.find-results: VerticalBox {
-        Image {
-            source: item.cover;
-        }
-        Text {
-            text: "ChapterCount: " + item.chapters.length;
-        }
-        Text {
-            text: item.id;
-        }
-        Text {
-            text: item.name;
-        }
 
-        Text {
-            text: item.genre;
+    VerticalBox {
+        padding:0px;
+        if SlintMediaSource.find-results.length == 0: Text {
+            text: "No items";
         }
-
-        Button {
-            text: "Play";
-            clicked => {
-                SlintAudioPlayer.play_media(item.id);
+        for item in SlintMediaSource.find-results: VerticalBox {
+            padding:0px;
+            Image {
+                padding:0px;
+                width:100%;
+                min-height:362px;
+                source: item.cover;
             }
+            Text {
+                text: item.genre;
+            }
+            Text {
+                text: item.artist;
+            }
+            Text {
+                text: "#" + item.part + " " + item.series;
+            }
+            Text {
+                text: item.name;
+            }
+
+            Button {
+                text: "Play";
+                clicked => {
+                    SlintAudioPlayer.play_media(item.id);
+                }
+            }
+
+            for chapter in item.chapters: Text {
+                text: chapter.name;
+            }
+
+
         }
     }
 }

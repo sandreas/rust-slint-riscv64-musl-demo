@@ -63,15 +63,31 @@ export component MainWindow inherits Window {
         }
     }
 
-    VerticalBox {
-        padding:0px;
-        if SlintNavigation.route[0] == "home": Home { }
-        if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
-        if SlintNavigation.route[0] == "music": Music { }
-        if SlintNavigation.route[0] == "settings": Settings { }
-        if SlintNavigation.route[0] == "search": Search { }
-        if SlintNavigation.route[0] == "details": Details {item-id: SlintNavigation.route[1];}
-        if SlintNavigation.route[0] == "player": Player {}
+    Flickable {
+    /*
+        VerticalBox {
+            for i in 100: Text {
+                text: i;
+
+            }
+        }
+        */
+
+        VerticalBox {
+            padding:0px;
+            if SlintNavigation.route[0] == "home": Home { }
+            if SlintNavigation.route[0] == "audiobooks": Audiobooks { }
+            if SlintNavigation.route[0] == "music": Music { }
+            if SlintNavigation.route[0] == "settings": Settings { }
+            if SlintNavigation.route[0] == "search": Search { }
+            if SlintNavigation.route[0] == "details": Details {
+                item-id: SlintNavigation.route[1];
+                padding: 0px;
+            }
+            if SlintNavigation.route[0] == "player": Player {}
+        }
+
+
     }
 
 
