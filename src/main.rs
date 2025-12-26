@@ -149,7 +149,21 @@ async fn main() -> Result<(), slint::PlatformError> {
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
 
+
     // let slint_app_window_weak = slint_app_window.as_weak();
+    let slint_callbacks = slint_app_window.global::<SlintCallbacks>();
+    slint_callbacks.on_format_duration(|slint_duration: i64| {
+        let u64millis = u64::try_from(slint_duration).unwrap();
+        let secs = u64millis / 1000;
+        let h = secs / (60 * 60);
+        let m = (secs / 60) % 60;
+        let s = secs % 60;
+
+            format!("{}:{:0<2}:{:0<2}", h, m, s).to_shared_string()
+
+
+    });
+
 
 
     let slint_audio_player = slint_app_window.global::<SlintAudioPlayer>();

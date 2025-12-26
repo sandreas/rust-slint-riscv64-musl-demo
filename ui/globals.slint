@@ -1,3 +1,8 @@
+
+export global SlintCallbacks {
+    pure callback format_duration(duration) -> string;
+}
+
 export global SlintIcons {
     in-out property <image> audiobooks: @image-url("images/icons/audiobooks.png");
     in-out property <image> music: @image-url("images/icons/music.png");
@@ -9,6 +14,8 @@ export global SlintAudioPlayer {
     in-out property <string> current-item-id;
     in-out property <string> status; // playing, paused
     in-out property <duration> position;
+    in-out property <string> position_formatted;
+
 
     callback play_test();
     callback play_media(string);

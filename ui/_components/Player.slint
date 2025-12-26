@@ -1,15 +1,18 @@
 
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
+import {SlintCallbacks, SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
 
 import {PlayButton} from "../_components/buttons/PlayButton.slint";
 
 // icons see: https://docs.rs/lucide-slint/latest/lucide_slint/
 export component Player {
     in-out property <SlintMediaSourceItem> item;
+
     VerticalBox {
         HorizontalBox {
-
+            Text {
+                text: SlintCallbacks.format_duration(SlintAudioPlayer.position);
+            }
             PlayButton {
                 clicked => {
                     SlintAudioPlayer.play_media(item.id);
