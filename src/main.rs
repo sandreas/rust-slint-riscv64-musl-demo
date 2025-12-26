@@ -149,21 +149,14 @@ async fn main() -> Result<(), slint::PlatformError> {
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
 
-
+    /*
     // let slint_app_window_weak = slint_app_window.as_weak();
     let slint_callbacks = slint_app_window.global::<SlintCallbacks>();
     slint_callbacks.on_format_duration(|slint_duration: i64| {
-        let u64millis = u64::try_from(slint_duration).unwrap();
-        let secs = u64millis / 1000;
-        let h = secs / (60 * 60);
-        let m = (secs / 60) % 60;
-        let s = secs % 60;
-
-            format!("{}:{:0<2}:{:0<2}", h, m, s).to_shared_string()
-
-
+        let duration = Duration::from_millis(slint_duration as u64);
+        format_duration(duration)
     });
-
+    */
 
 
     let slint_audio_player = slint_app_window.global::<SlintAudioPlayer>();
@@ -331,8 +324,12 @@ async fn main() -> Result<(), slint::PlatformError> {
                     PlayerEvent::Stopped => {}
 
                     PlayerEvent::Position(position) => {
+                        /*
                         let slint_position: i64 = position.as_millis().try_into().expect("Duration too long for u64");
                         inner.set_position(slint_position);
+                         */
+
+                        inner.set_position_formatted(format_duration(position).to_shared_string());
                     }
                 }
             } else {
@@ -343,6 +340,15 @@ async fn main() -> Result<(), slint::PlatformError> {
     }).unwrap();
 
     slint_app_window.run()
+}
+
+fn format_duration(duration: Duration) -> String {
+    let millis = duration.as_millis();
+    let secs = millis / 1000;
+    let h = secs / (60 * 60);
+    let m = (secs / 60) % 60;
+    let s = secs % 60;
+    format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
 }
 
 fn load_preferences(_: SlintPreferences) {

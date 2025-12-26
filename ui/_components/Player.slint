@@ -1,6 +1,6 @@
 
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import {SlintCallbacks, SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
+import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
 
 import {PlayButton} from "../_components/buttons/PlayButton.slint";
 
@@ -11,7 +11,7 @@ export component Player {
     VerticalBox {
         HorizontalBox {
             Text {
-                text: SlintCallbacks.format_duration(SlintAudioPlayer.position);
+                text: SlintAudioPlayer.position_formatted;
             }
             PlayButton {
                 clicked => {
