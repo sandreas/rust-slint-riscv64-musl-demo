@@ -1,0 +1,17 @@
+import {
+    VerticalBox,
+} from "std-widgets.slint";
+
+import { PlayIcon } from "@lucide";
+
+
+export component PlayButton inherits TouchArea {
+    VerticalBox {
+        padding:0px;
+        PlayIcon {
+           stroke: #5E72E4;    // set the stroke color
+           size: 48px;         // set the icon size
+           stroke-width: 2;    // set the stroke width
+        }
+    }
+}

@@ -3253,6 +3253,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lucide-slint"
+version = "0.562.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e011cec45d796d46e7c3039862503ececfe6b53f7c4f210fa3e0871f4ed3ca0"
+
+[[package]]
 name = "lyon_algorithms"
 version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4881,6 +4887,7 @@ dependencies = [
  "file-id",
  "image",
  "lofty",
+ "lucide-slint",
  "mp4ameta",
  "rodio",
  "sea-orm",

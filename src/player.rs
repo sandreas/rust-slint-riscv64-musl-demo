@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use rodio::source::SeekError;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
 use crate::media_source_trait::MediaSource;
 
@@ -30,6 +31,7 @@ pub enum PlayerCommand {
 #[derive(Debug)]
 pub enum PlayerEvent {
     Status(String),
+    Position(Duration),
     Stopped,
 }
 
@@ -182,19 +184,33 @@ impl Player {
                         PlayerCommand::Update(s) => {
                             let x = s.clone();
                             self.play_media(s.clone()).await;
-                            let _ = evt_tx.send(PlayerEvent::Status(format!("Playing {}", x)));
+                            // format!("Playing {}", x)
+                            // todo: implement player.is_playing / player.status
+
+                            self.update_playing_status(&evt_tx).await;
+                            /*
+                            if self.sink.is_paused() {
+                                let _ = evt_tx.send(PlayerEvent::Status("paused".to_string()));
+                            } else {
+                                let _ = evt_tx.send(PlayerEvent::Status("playing".to_string()));
+                            }
+
+                             */
                         }
                         PlayerCommand::PlayTest() => {
                             self.play_test().await;
                         }
                         PlayerCommand::PlayMedia(s) => {
                             self.play_media(s).await;
+                            self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Play() => {
                             Player::play(sink);
+                            self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Pause() => {
                             Player::pause(sink);
+                            self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Stop() => {
                             let _ = evt_tx.send(PlayerEvent::Stopped);
@@ -202,9 +218,11 @@ impl Player {
                         }
                     }
                 }
-                _ = tokio::time::sleep(Duration::from_secs(10)) => {
 
-                    let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                    // sink.get_pos()
+                    // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
+                    let _ = evt_tx.send(PlayerEvent::Position(sink.get_pos()));
                 }
             }
         }
@@ -233,5 +251,11 @@ impl Player {
     }
 
      */
-
+    async fn update_playing_status(&self, evt_tx: &UnboundedSender<PlayerEvent>) {
+        if self.sink.is_paused() {
+            let _ = evt_tx.send(PlayerEvent::Status("paused".to_string()));
+        } else {
+            let _ = evt_tx.send(PlayerEvent::Status("playing".to_string()));
+        }
+    }
 }

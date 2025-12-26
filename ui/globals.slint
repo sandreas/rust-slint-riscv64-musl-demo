@@ -6,6 +6,10 @@ export global SlintIcons {
 }
 
 export global SlintAudioPlayer {
+    in-out property <string> current-item-id;
+    in-out property <string> status; // playing, paused
+    in-out property <duration> position;
+
     callback play_test();
     callback play_media(string);
     callback play();

@@ -130,12 +130,13 @@ async fn main() -> Result<(), slint::PlatformError> {
         player.run(player_cmd_rx, player_evt_tx).await;
     });
 
+    /*
     tokio::spawn(async move {
         while let Some(event) = player_evt_rx.recv().await {
             println!("Received event: {:?}", event);
         }
     });
-
+    */
     // this part only works when USB-C is plugged in
     //     let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
     //     tokio::spawn(async move {
@@ -298,6 +299,34 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     }).unwrap();
 
+    let ui_handle_player = slint_media_source_ui.as_weak();
+
+    slint::spawn_local(async move {
+        // now owned in this async block
+        let mut player_evt_rx = player_evt_rx;
+
+        while let Some(event) = player_evt_rx.recv().await {
+            if let Some(ui) = ui_handle_player.upgrade() {
+                let inner = ui.global::<SlintAudioPlayer>();
+
+                match event {
+                    PlayerEvent::Status(status) => {
+                        inner.set_status(status.to_shared_string());
+                    }
+
+                    PlayerEvent::Stopped => {}
+
+                    PlayerEvent::Position(position) => {
+                        let slint_position: i64 = position.as_millis().try_into().expect("Duration too long for u64");
+                        inner.set_position(slint_position);
+                    }
+                }
+            } else {
+                // UI was dropped; stop listening
+                break;
+            }
+        }
+    }).unwrap();
 
     slint_app_window.run()
 }

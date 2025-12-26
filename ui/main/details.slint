@@ -16,6 +16,8 @@ import {
 
 import {SlintNavigation, SlintAudioPlayer, SlintMediaSource, SlintMediaSourceItem} from "../globals.slint";
 
+import {Player} from "../_components/Player.slint";
+
 export component Details {
 
     in-out property <string> item-id;
@@ -38,6 +40,9 @@ export component Details {
                 width:100%;
                 min-height:362px;
                 source: item.cover;
+            }
+            Player {
+                item: item;
             }
             Text {
                 text: item.genre;

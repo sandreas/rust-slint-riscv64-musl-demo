@@ -1,0 +1,21 @@
+
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
+
+import {PlayButton} from "../_components/buttons/PlayButton.slint";
+
+// icons see: https://docs.rs/lucide-slint/latest/lucide_slint/
+export component Player {
+    in-out property <SlintMediaSourceItem> item;
+    VerticalBox {
+        HorizontalBox {
+
+            PlayButton {
+                clicked => {
+                    SlintAudioPlayer.play_media(item.id);
+                }
+            }
+        }
+
+    }
+}
