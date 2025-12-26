@@ -9,10 +9,12 @@ export component Player {
     in-out property <SlintMediaSourceItem> item;
 
     VerticalBox {
-        HorizontalBox {
+        if SlintAudioPlayer.current-item-id == item.id: HorizontalBox {
             Text {
                 text: SlintAudioPlayer.position_formatted;
             }
+        }
+        HorizontalBox {
             PlayButton {
                 clicked => {
                     SlintAudioPlayer.play_media(item.id);

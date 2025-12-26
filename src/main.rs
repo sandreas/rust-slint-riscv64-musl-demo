@@ -317,18 +317,19 @@ async fn main() -> Result<(), slint::PlatformError> {
                 let inner = ui.global::<SlintAudioPlayer>();
 
                 match event {
-                    PlayerEvent::Status(status) => {
+                    PlayerEvent::Status(item_id, status) => {
+                        inner.set_current_item_id(item_id.to_shared_string());
                         inner.set_status(status.to_shared_string());
                     }
 
                     PlayerEvent::Stopped => {}
 
-                    PlayerEvent::Position(position) => {
+                    PlayerEvent::Position(item_id, position) => {
                         /*
                         let slint_position: i64 = position.as_millis().try_into().expect("Duration too long for u64");
                         inner.set_position(slint_position);
                          */
-
+                        inner.set_current_item_id(item_id.to_shared_string());
                         inner.set_position_formatted(format_duration(position).to_shared_string());
                     }
                 }

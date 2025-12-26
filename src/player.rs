@@ -30,8 +30,8 @@ pub enum PlayerCommand {
 
 #[derive(Debug)]
 pub enum PlayerEvent {
-    Status(String),
-    Position(Duration),
+    Status(String, String),
+    Position(String, Duration),
     Stopped,
 }
 
@@ -222,7 +222,7 @@ impl Player {
                 _ = tokio::time::sleep(Duration::from_secs(1)) => {
                     // sink.get_pos()
                     // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
-                    let _ = evt_tx.send(PlayerEvent::Position(sink.get_pos()));
+                    let _ = evt_tx.send(PlayerEvent::Position(self.loaded_id.to_string(), sink.get_pos()));
                 }
             }
         }
@@ -253,9 +253,9 @@ impl Player {
      */
     async fn update_playing_status(&self, evt_tx: &UnboundedSender<PlayerEvent>) {
         if self.sink.is_paused() {
-            let _ = evt_tx.send(PlayerEvent::Status("paused".to_string()));
+            let _ = evt_tx.send(PlayerEvent::Status(self.loaded_id.to_string(), "paused".to_string()));
         } else {
-            let _ = evt_tx.send(PlayerEvent::Status("playing".to_string()));
+            let _ = evt_tx.send(PlayerEvent::Status(self.loaded_id.to_string(), "playing".to_string()));
         }
     }
 }
