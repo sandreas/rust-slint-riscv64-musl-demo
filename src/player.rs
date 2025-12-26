@@ -219,7 +219,7 @@ impl Player {
                     }
                 }
 
-                _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                _ = tokio::time::sleep(Duration::from_millis(500)) => {
                     // sink.get_pos()
                     // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
                     let _ = evt_tx.send(PlayerEvent::Position(self.loaded_id.to_string(), sink.get_pos()));

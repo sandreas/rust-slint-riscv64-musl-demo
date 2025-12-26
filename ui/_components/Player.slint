@@ -3,6 +3,7 @@ import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
 
 import {PlayButton} from "../_components/buttons/PlayButton.slint";
+import { ToggleButton } from "buttons/ToggleButton.slint";
 
 // icons see: https://docs.rs/lucide-slint/latest/lucide_slint/
 export component Player {
@@ -15,7 +16,8 @@ export component Player {
             }
         }
         HorizontalBox {
-            PlayButton {
+            ToggleButton {
+                is-playing: SlintAudioPlayer.status == "playing";
                 clicked => {
                     SlintAudioPlayer.play_media(item.id);
                 }
