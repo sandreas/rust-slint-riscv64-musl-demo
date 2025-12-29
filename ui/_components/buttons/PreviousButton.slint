@@ -1,14 +1,14 @@
 import {
     VerticalBox,
 } from "std-widgets.slint";
-import { NextIcon } from "../icons/NextIcon.slint";
+import { PreviousIcon } from "../icons/PreviousIcon.slint";
 
 
-export component NextButton inherits TouchArea {
+export component PreviousButton inherits TouchArea {
     in-out property <physical-length> size: 48px;
     VerticalBox {
         padding:0px;
-        NextIcon {
+        PreviousIcon {
             width: size;
             height: size;
         }

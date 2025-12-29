@@ -3,6 +3,8 @@ import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
 
 import { TogglePlayButton } from "buttons/TogglePlayButton.slint";
+import { NextButton } from "buttons/NextButton.slint";
+import { PreviousButton } from "buttons/PreviousButton.slint";
 
 // icons see: https://docs.rs/lucide-slint/latest/lucide_slint/
 export component Player {
@@ -15,10 +17,23 @@ export component Player {
             }
         }
         HorizontalBox {
+            alignment: center;
+            if SlintAudioPlayer.current-item-id == item.id: PreviousButton {
+                clicked => {
+                    SlintAudioPlayer.previous();
+                }
+            }
+
             TogglePlayButton {
                 is-playing: SlintAudioPlayer.status == "playing";
                 clicked => {
                     SlintAudioPlayer.play_media(item.id);
+                }
+            }
+
+            if SlintAudioPlayer.current-item-id == item.id: NextButton {
+                clicked => {
+                    SlintAudioPlayer.next();
                 }
             }
         }

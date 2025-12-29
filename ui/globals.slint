@@ -27,6 +27,10 @@ export global SlintAudioPlayer {
     callback play_media(string);
     callback play();
     callback pause();
+    callback next();
+    callback previous();
+    callback seek_relative(duration);
+    callback seek_to(duration);
 }
 
 export global SlintNavigation {

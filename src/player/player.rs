@@ -26,6 +26,10 @@ pub enum PlayerCommand {
     Pause(),
     Stop(),
     Play(),
+    Next(),
+    Previous(),
+    SeekRelative(i64),
+    SeekTo(Duration)
 }
 
 #[derive(Debug)]
@@ -162,7 +166,6 @@ impl Player {
 
     fn try_seek(sink: &Sink, position: Duration) -> Result<(), SeekError> {
         sink.try_seek(position)
-
     }
 
     // todo:
@@ -215,17 +218,46 @@ impl Player {
                         PlayerCommand::Stop() => {
                             let _ = evt_tx.send(PlayerEvent::Stopped);
                             break;
+                        },
+                        PlayerCommand::Next() => {
+                            let current_pos = self.sink.get_pos();
+                            let current_item_option = self.media_source.find(self.loaded_id.as_str()).await;
+                            if current_item_option.is_none() {
+                                return;
+                            }
+                            let current_item = current_item_option.unwrap();
+                            let chapters = current_item.metadata.chapters;
+                            let mut next_chapter_pos : Option<Duration> = None;
+                            for chapter in chapters {
+                                if chapter.start > current_pos {
+                                    next_chapter_pos = Some(chapter.start);
+                                    break;
+                                }
+                            }
+                            if(next_chapter_pos.is_some()) {
+                                Player::try_seek(sink, next_chapter_pos.unwrap()).unwrap();
+                                self.update_position(&evt_tx, next_chapter_pos.unwrap()).await;
+                            } else {
+                                self.sink.skip_one()
+                            }
                         }
+                        PlayerCommand::Previous() => {}
+                        PlayerCommand::SeekRelative(_) => {}
+                        PlayerCommand::SeekTo(_) => {}
                     }
                 }
 
                 _ = tokio::time::sleep(Duration::from_millis(500)) => {
+                    self.update_position(&evt_tx, sink.get_pos()).await;
                     // sink.get_pos()
                     // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
-                    let _ = evt_tx.send(PlayerEvent::Position(self.loaded_id.to_string(), sink.get_pos()));
                 }
             }
         }
+    }
+
+    async fn update_position(&self, evt_tx: &mpsc::UnboundedSender<PlayerEvent>, pos: Duration) {
+        let _ = evt_tx.send(PlayerEvent::Position(self.loaded_id.to_string(), pos));
     }
 
     /*

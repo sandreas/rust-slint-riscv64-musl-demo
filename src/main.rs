@@ -250,6 +250,41 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+    /*
+    Next(),
+    Previous(),
+    SeekRelative(Duration),
+    SeekTo(Duration)
+    */
+
+    slint_audio_player.on_next({
+        let tx = player_cmd_tx.clone();
+        move || {
+            tx.send(PlayerCommand::Next()).unwrap();
+        }
+    });
+
+    slint_audio_player.on_previous({
+        let tx = player_cmd_tx.clone();
+        move || {
+            tx.send(PlayerCommand::Previous()).unwrap();
+        }
+    });
+
+    slint_audio_player.on_seek_relative({
+        let tx = player_cmd_tx.clone();
+        move |millis_i64| {
+            tx.send(PlayerCommand::SeekRelative(millis_i64)).unwrap();
+        }
+    });
+
+    slint_audio_player.on_seek_to({
+        let tx = player_cmd_tx.clone();
+        move |millis_i64:i64| {
+            tx.send(PlayerCommand::SeekTo(Duration::from_millis(millis_i64 as u64))).unwrap();
+        }
+    });
+
     let slint_preferences = slint_app_window.global::<SlintPreferences>();
     // load_preferences(&slint_preferences);
 
