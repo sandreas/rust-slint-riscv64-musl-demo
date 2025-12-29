@@ -23,7 +23,6 @@ struct Args {
 }
 
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
-use crate::player::{Player, PlayerCommand, PlayerEvent};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
 use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, SharedVector, ToSharedString, VecModel};
@@ -39,7 +38,7 @@ use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetDevice, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
-
+use crate::player::player::{Player, PlayerCommand, PlayerEvent};
 
 slint::include_modules!();
 
