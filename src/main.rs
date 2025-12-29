@@ -7,12 +7,12 @@ use tokio::sync::mpsc;
 mod player;
 mod headset;
 mod gpio_button_service;
-mod file_media_source;
-mod media_source_trait;
+
 mod migrator;
 mod entity;
 
 pub mod serde_json_mods;
+mod media_source;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -34,9 +34,9 @@ use std::time::Duration;
 use cpal::traits::{DeviceTrait, HostTrait};
 use evdev::Device;
 use lofty::picture::PictureType::CoverFront;
-use crate::file_media_source::FileMediaSource;
 use crate::headset::{Headset, HeadsetDevice, HeadsetEvent};
-use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
+use crate::media_source::file_media_source::FileMediaSource;
+use crate::media_source::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
 use crate::player::player::{Player, PlayerCommand, PlayerEvent};
 

@@ -1,5 +1,4 @@
 use crate::item;
-use crate::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceImageCodec, MediaSourceItem, MediaSourceMetadata, MediaSourcePicture, MediaType, ReadableSeeker};
 use async_trait::async_trait;
 use chrono::{DateTime, Local, Utc};
 use lofty::error::LoftyError;
@@ -30,6 +29,7 @@ use sea_orm::prelude::HasMany;
 use xxhash_rust::xxh3::xxh3_64;
 use crate::entity::items_json_metadata::JsonTagField::Chapters;
 use crate::entity::items_metadata::TagField::{*};
+use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceImageCodec, MediaSourceItem, MediaSourceMetadata, MediaSourcePicture, MediaType};
 
 #[derive(Clone)]
 pub struct FileMediaSource {

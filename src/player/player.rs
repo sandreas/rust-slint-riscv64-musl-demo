@@ -15,7 +15,7 @@ use rodio::source::SeekError;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
-use crate::media_source_trait::MediaSource;
+use crate::media_source::media_source_trait::MediaSource;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
