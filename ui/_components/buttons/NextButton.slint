@@ -1,0 +1,37 @@
+import {
+    VerticalBox,
+} from "std-widgets.slint";
+import { NextIcon } from "../icons/NextIcon.slint";
+
+
+export component ToggleNextButton inherits TouchArea {
+    in-out property <physical-length> size: 48px;
+    VerticalBox {
+        padding:0px;
+        NextIcon {
+            width: size;
+            height: size;
+        }
+    }
+}
+
+
+
+/*
+export component HomeButton inherits Navigator {
+    in property <image> image;
+    in property <string> text;
+    VerticalBox {
+        Image {
+            source: image;
+            width: 150px;
+            height: 150px;
+        }
+
+        Text {
+            horizontal-alignment: center;
+            text: text;
+        }
+    }
+}
+*/

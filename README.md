@@ -131,8 +131,8 @@ That's it for now, more to come.
   - [ ] Test Headphone-remote controls
 - [ ] Implement the DAP software for the embedded device
   - Next Steps
-    - [ ] Store media items to database
-    - [ ] Improve display of media items
+    - [x] Store media items to database
+    - [x] Improve display of media items
     - [ ] Load preferences on app start
     - [ ] Sync preferences to DB when changed
     - [ ] Extend schema to store media-progress for items > 15 minutes
@@ -171,7 +171,7 @@ That's it for now, more to come.
 - [ ] Element sizes can not be scaled (e.g. Slider or Checkbox)
 - [ ] Something is wrong with the LCD Color, it may be the driver or slint
 - [ ] Inertial scrolling
-
+- [ ] Using / importing a rust struct into slint (https://github.com/slint-ui/slint/issues/1726)
 # Notes
 - Routing: https://github.com/slint-ui/slint/discussions/6783
 - Swipe: https://docs.slint.dev/latest/docs/slint/reference/gestures/swipegesturehandler/
@@ -240,3 +240,37 @@ See https://www.sea-ql.org/sea-orm-cookbook/018-raw-and-unprepared.html:q
   - key (string)
   - value (string)
 
+
+# Preparing a custom firmware image
+
+# download the image
+wget https://github.com/scpcom/LicheeSG-Nano-Build/releases/download/v2.3.0-10/licheervnano-e_sd.img.xz
+
+# extract the image
+xz -d licheervnano-e_sd.img.xz
+
+# determine the offset of the required partition
+fdisk -lu licheervnano-e_sd.img
+
+# 
+mkdir -p mnt
+mount -o loop licheervnano-e_sd.img /mnt/disk.img.partition
+
+
+
+
+# Development
+## Input events
+To access input events you need to be a member of the  input group:
+
+sudo usermod -aG input $USER
+
+
+# Interesting hardware links
+
+## Basics for custom pcb
+
+For a custom pcb we need a battery charging / protection unit, a battery gauge and a button io
+- Power Boards: 
+  - https://github.com/wagiminator/Power-Boards
+  - https://github.com/wagiminator/Power-Boards/tree/master/LiFePO4_Power_Board_LS_5V 

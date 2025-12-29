@@ -1,0 +1,48 @@
+import {
+    VerticalBox,
+} from "std-widgets.slint";
+import { SlintIcons } from "../../globals.slint";
+import { PlayIcon } from "../icons/PlayIcon.slint";
+import { PauseIcon } from "../icons/PauseIcon.slint";
+
+// import { PlayIcon, PauseIcon } from "@lucide";
+
+
+export component TogglePlayButton inherits TouchArea {
+
+    in-out property <bool> is-playing: false;
+    in-out property <physical-length> size: 48px;
+    VerticalBox {
+        padding:0px;
+        if is-playing: PauseIcon {
+            width: size;
+            height: size;
+        }
+        if !is-playing: PlayIcon {
+            width: size;
+            height: size;
+       }
+    }
+
+}
+
+
+
+/*
+export component HomeButton inherits Navigator {
+    in property <image> image;
+    in property <string> text;
+    VerticalBox {
+        Image {
+            source: image;
+            width: 150px;
+            height: 150px;
+        }
+
+        Text {
+            horizontal-alignment: center;
+            text: text;
+        }
+    }
+}
+*/

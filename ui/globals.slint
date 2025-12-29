@@ -4,10 +4,16 @@ export global SlintCallbacks {
 }
 */
 export global SlintIcons {
-    in-out property <image> audiobooks: @image-url("images/icons/audiobooks.png");
-    in-out property <image> music: @image-url("images/icons/music.png");
-    in-out property <image> search: @image-url("images/icons/search.png");
-    in-out property <image> settings: @image-url("images/icons/settings.png");
+    // home
+    in-out property <image> audiobooks: @image-url("images/icons/home/audiobooks.png");
+    in-out property <image> music: @image-url("images/icons/home/music.png");
+    in-out property <image> search: @image-url("images/icons/home/search.png");
+    in-out property <image> settings: @image-url("images/icons/home/settings.png");
+    // player
+    in-out property <image> next: @image-url("images/icons/player/skip_next.png");
+    in-out property <image> previous: @image-url("images/icons/player/skip_previous.png");
+    in-out property <image> pause: @image-url("images/icons/player/pause.png");
+    in-out property <image> play: @image-url("images/icons/player/play_arrow.png");
 }
 
 export global SlintAudioPlayer {

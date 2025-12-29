@@ -32,15 +32,17 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
+use evdev::Device;
 use lofty::picture::PictureType::CoverFront;
 use crate::file_media_source::FileMediaSource;
+use crate::headset::{Headset, HeadsetDevice, HeadsetEvent};
 use crate::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
+
 
 slint::include_modules!();
 
 
-const DB_URL: &str = "";
 
 
 
@@ -69,6 +71,26 @@ async fn main() -> Result<(), slint::PlatformError> {
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
         .init();
+
+    // let input_devs = Headset::list_input_devices();
+
+
+
+
+    /*
+    // let mut input = Libinput::new_with_udev(Interface);
+    let mut input = Libinput::new_from_path(Interface);
+    // input.udev_assign_seat("seat0").unwrap();
+    input.path_add_device("/dev/input/event13");
+    loop {
+        input.dispatch().unwrap();
+        for event in &mut input {
+            println!("Got event: {:?}", event);
+        }
+    }
+
+     */
+
 
     let args = Args::parse();
     let base_dir = args.base_directory.clone();
@@ -136,15 +158,26 @@ async fn main() -> Result<(), slint::PlatformError> {
             println!("Received event: {:?}", event);
         }
     });
-    */
+
+
+    let devices_result = Headset::list_input_devices();
+    if let Ok(devices) = devices_result {
+        for device in devices {
+            println!("{}", device.name);
+            println!("{}", device.unique_name);
+            println!("{:?}", device.path);
+        }
+    }
+
+     */
     // this part only works when USB-C is plugged in
-    //     let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
-    //     tokio::spawn(async move {
-    //         let device_path ="/dev/input/event13";
-    //         let device = Device::open(Path::new(&device_path)).unwrap();
-    //         let mut headset = Headset::new(device);
-    //         headset.run(head_event_tx).await;
-    //     });
+        // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+        // tokio::spawn(async move {
+        //     let device_path ="/dev/input/event13";
+        //     let device = Device::open(Path::new(&device_path)).unwrap();
+        //     let mut headset = Headset::new(device);
+        //     headset.run(head_event_tx).await;
+        // });
 
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
@@ -418,8 +451,8 @@ fn load_cover_with_fallback(cover_path: &str, media_type:&MediaType) -> (slint::
 
     // todo: implement fallback image
     let fallback_image_result = match media_type {
-        MediaType::Audiobook => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/audiobooks.svg")),
-        _ => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/music.svg")),
+        MediaType::Audiobook => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/home/audiobooks.png")),
+        _ => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/home/music.png")),
     };
     if let Ok(fallback_image) = fallback_image_result {
         return (fallback_image, LoadCoverResult::Placeholder)
