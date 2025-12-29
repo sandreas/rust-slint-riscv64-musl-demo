@@ -27,11 +27,12 @@ use crate::player::{Player, PlayerCommand, PlayerEvent};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
 use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, SharedVector, ToSharedString, VecModel};
-use std::iter;
+use std::{iter, thread};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
+use cpal::traits::{DeviceTrait, HostTrait};
 use evdev::Device;
 use lofty::picture::PictureType::CoverFront;
 use crate::file_media_source::FileMediaSource;
@@ -67,6 +68,35 @@ async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection,
 
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+
+/*
+    for i in 1..5 {
+        let hosts_ids = cpal::available_hosts();
+
+        for host_id in hosts_ids {
+            println!("==== HOST {:?}", host_id);
+
+            let host_result = cpal::host_from_id(host_id);
+
+            if let Ok(host) = host_result {
+                let devices_result = host.devices();
+                if let Ok(devices) = devices_result {
+
+                    for device in devices {
+                        let devicename_result = device.name();
+                        if let Ok(devicename) = devicename_result {
+                            println!("   ----{:?}", devicename);
+                        }
+                    }
+                }
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+
+    return Ok(());
+*/
+
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
