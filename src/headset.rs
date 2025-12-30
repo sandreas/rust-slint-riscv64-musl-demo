@@ -12,7 +12,8 @@ pub enum HeadsetEvent {
 }
 
 pub struct Headset {
-    device: Device
+    event_device: String,
+    device: Option<Device>,
 }
 
 #[derive(Debug,Clone)]
@@ -24,9 +25,10 @@ pub struct HeadsetDevice {
 
 impl Headset {
     // sink:Option<Sink>, stream: Option<OutputStream>
-    pub fn new(event_device: Device) -> Headset {
+    pub fn new(event_device: String) -> Headset {
         Self {
-            device: event_device
+            event_device,
+            device: None
         }
     }
 
@@ -88,39 +90,50 @@ impl Headset {
     ) {
 
         loop {
-            for event in self.device.fetch_events().unwrap() {
-                // let _ = evt_tx.send(ev);
-                match event.destructure() {
-                    EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
-                        println!("PLAYPAUSE PRESSED: {:?}", ev);
-                    },
-                    EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
-                        println!("PLAYPAUSE RELEASED: {:?}", ev);
-                    },
-                    EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
-                        println!("VOLUME_UP PRESSED: {:?}", ev);
-                    },
-                    EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 0) => {
-                        println!("VOLUME_UP RELEASED: {:?}", ev);
-                    },
-                    EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 1) => {
-                        println!("VOLUME_DOWN PRESSED: {:?}", ev);
-                    },
-                    EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 0) => {
-                        println!("VOLUME_DOWN RELEASED: {:?}", ev);
-                    },
-                    _ => println!("got a different event: {:?}", event.destructure())
+            if self.device.is_none() {
+                let device_path = Path::new(&self.event_device);
+                if !Path::exists(device_path) {
+                    continue;
+                }
+
+                let device_result = Device::open(device_path);
+                if let Ok(device) = device_result {
+                    self.device = Some(device);
                 }
             }
-            /*
-            tokio::select! {
-
-                _ = tokio::time::sleep(Duration::from_secs(0)) => {
-                    // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", name)));
+            
+            if let Some(device) = &mut self.device {
+                for event in device.fetch_events().unwrap() {
+                    // let _ = evt_tx.send(ev);
+                    match event.destructure() {
+                        EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
+                            println!("PLAYPAUSE PRESSED: {:?}", ev);
+                        },
+                        EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
+                            println!("PLAYPAUSE RELEASED: {:?}", ev);
+                        },
+                        EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
+                            println!("VOLUME_UP PRESSED: {:?}", ev);
+                        },
+                        EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 0) => {
+                            println!("VOLUME_UP RELEASED: {:?}", ev);
+                        },
+                        EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 1) => {
+                            println!("VOLUME_DOWN PRESSED: {:?}", ev);
+                        },
+                        EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 0) => {
+                            println!("VOLUME_DOWN RELEASED: {:?}", ev);
+                        },
+                        _ => println!("got a different event: {:?}", event.destructure())
+                    }
                 }
             }
-
-             */
+                
+            
+            
+            
+            
+            
         }
     }
 }

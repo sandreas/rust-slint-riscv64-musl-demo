@@ -200,13 +200,12 @@ async fn main() -> Result<(), slint::PlatformError> {
 
      */
     // this part only works when USB-C is plugged in
-        // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
-        // tokio::spawn(async move {
-        //     let device_path ="/dev/input/event13";
-        //     let device = Device::open(Path::new(&device_path)).unwrap();
-        //     let mut headset = Headset::new(device);
-        //     headset.run(head_event_tx).await;
-        // });
+    let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+    tokio::spawn(async move {
+        let device_path ="/dev/input/event13";
+        let mut headset = Headset::new(device_path.to_string());
+        headset.run(head_event_tx).await;
+    });
 
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
@@ -589,9 +588,6 @@ fn rust_items_to_slint_model(rust_items: Vec<MediaSourceItem>, details:bool) -> 
     ModelRc::from(Rc::new(model))
 }
 
-fn duration_to_millis(duration: Duration) -> Result<u64, &'static str> {
-    duration.as_millis().try_into().map_err(|_| "Duration exceeds u64::MAX ms")
-}
 
 
 fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
@@ -603,30 +599,3 @@ fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
 }
 
 
-fn convert_int_to_media_type(media_type: i32) -> MediaType {
-    match media_type {
-        2 => MediaType::Audiobook,
-        4 => MediaType::Music,
-        _ => MediaType::Unspecified,
-    }
-}
-/*
-
-use slint::{SharedArray, SharedString, SharedImage, SharedVector, SharedBool};
-use std::rc::Rc;
-
-fn rust_chapters_to_slint(chapters: Vec<MediaSourceChapter>) -> SharedArray<SlintMediaSourceChapter> {
-    let slint_chapters: Vec<SlintMediaSourceChapter> = chapters
-        .into_iter()
-        .map(|chapter| {
-            SlintMediaSourceChapter::new(
-                Rc::new(chapter.name),  // String → SharedString
-                chapter.start,          // Duration auto-converts (with serde)
-                chapter.duration,       // Duration auto-converts (with serde)
-            )
-        })
-        .collect();
-
-    SharedArray::from(slint_chapters)
-}
-*/
