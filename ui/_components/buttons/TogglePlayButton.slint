@@ -2,10 +2,6 @@ import {
     VerticalBox,
 } from "std-widgets.slint";
 import { SlintIcons } from "../../globals.slint";
-import { PlayIcon } from "../icons/PlayIcon.slint";
-import { PauseIcon } from "../icons/PauseIcon.slint";
-
-// import { PlayIcon, PauseIcon } from "@lucide";
 
 
 export component TogglePlayButton inherits TouchArea {
@@ -14,11 +10,13 @@ export component TogglePlayButton inherits TouchArea {
     in-out property <physical-length> size: 48px;
     VerticalBox {
         padding:0px;
-        if is-playing: PauseIcon {
+        if is-playing: Image {
+            source: SlintIcons.pause;
             width: size;
             height: size;
         }
-        if !is-playing: PlayIcon {
+        if !is-playing: Image {
+            source: SlintIcons.play;
             width: size;
             height: size;
        }

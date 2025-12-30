@@ -2,7 +2,7 @@
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 // load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
 
-
+use std::cmp::{max, min};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
 use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
@@ -15,7 +15,7 @@ use rodio::source::SeekError;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
-use crate::media_source::media_source_trait::MediaSource;
+use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceItem};
 
 #[derive(Debug)]
 pub enum PlayerCommand {
@@ -43,8 +43,10 @@ pub struct Player {
     media_source: Arc<dyn MediaSource>,
     stream: OutputStream, // when removed, the samples do not play
     sink: Sink,
-    loaded_id: String,
+    item: Option<MediaSourceItem>,
 }
+
+
 
 impl Player {
     // sink:Option<Sink>, stream: Option<OutputStream>
@@ -52,8 +54,13 @@ impl Player {
         let builder = Self::create_device_output_builder(device_name, fallback_device_name);
         let stream = builder.open_stream_or_fallback().unwrap();
         let sink = Sink::connect_new(stream.mixer());
-        Self { media_source, sink, stream, loaded_id: String::from("") }
+        Self { media_source, sink, stream, item: None }
     }
+
+    fn back_delay(&self) -> Duration {
+        Duration::from_secs(2)
+    }
+
     //                     let match_string = "USB-C to 3.5mm Headphone Jack A";
     //                     let match_string2 = "pipewire";
     fn create_device_output_builder(preferred_name: String, fallback_name: String) -> OutputStreamBuilder {
@@ -100,7 +107,7 @@ impl Player {
     async fn play_test(&mut self) {
 
         let sink = &self.sink;
-        self.loaded_id = "".to_string();
+        self.item = None;
         sink.clear();
         let waves = vec!(230f32, 270f32, 330f32,270f32, 230f32);
         for w in waves {
@@ -113,38 +120,25 @@ impl Player {
         }
     }
     async fn play_media(&mut self, id: String) -> io::Result<()> {
+        let self_item = self.item.clone();
 
-        if id == self.loaded_id {
+        if let Some(i) = self_item && id == i.id {
             self.toggle();
             return Ok(());
         }
 
 
-        let item_option = self.media_source.find(&id).await;
-        
-        
-        if item_option.is_none() {
+        self.item = self.media_source.find(&id).await;
+        if self.item.is_none() {
             return Ok(());
         }
-        
-        let item = item_option.unwrap();
+        let self_item = self.item.clone();
+        let item = self_item.unwrap();
         let path = Path::new(item.location.as_str());
-
-        /*
-        // todo: this is a dirty hack, because somehow self.media_source.open is more complex to implement to work with rodio
-        let base_dir = self.media_source.id();
-        let relative_dir = item.location.trim_start_matches('/');
-        let path = Path::new(base_dir.as_str()).join(relative_dir);
-        if !path.exists() {
-            return Ok(()); // todo handle error
-        }
-        */
-        
         let file = File::open(path)?;
         self.sink.clear();
         self.sink.append(rodio::Decoder::try_from(file).unwrap());
         self.sink.play();
-        self.loaded_id = id;
         Ok(())
     }
 
@@ -156,17 +150,69 @@ impl Player {
         }
     }
 
-    fn play(sink: &Sink) {
-        sink.play();
+    fn play(&self) {
+        self.sink.play();
     }
 
-    fn pause(sink: &Sink) {
-        sink.pause()
+    fn pause(&self) {
+        self.sink.pause()
     }
 
-    fn try_seek(sink: &Sink, position: Duration) -> Result<(), SeekError> {
-        sink.try_seek(position)
+    fn try_seek(&self, position: Duration) -> Result<(), SeekError> {
+        self.sink.try_seek(position)
     }
+
+    fn chapters(&self) -> Vec<MediaSourceChapter> {
+        let self_item = self.item.clone();
+        if self_item.is_none() {
+            return vec![];
+        }
+        let current_item = self_item.unwrap();
+        current_item.metadata.chapters
+    }
+
+    fn next_chapter(&self) -> Option<MediaSourceChapter> {
+        let current_pos = self.sink.get_pos();
+        let chapters = self.chapters();
+        for chapter in chapters {
+            if chapter.start > current_pos {
+                return Some(chapter);
+            }
+        }
+        None
+    }
+
+    fn current_chapter(&self) -> Option<MediaSourceChapter> {
+        let current_pos = self.sink.get_pos();
+        let chapters = self.chapters();
+        if chapters.is_empty() {
+            return None;
+        }
+        for chapter in chapters {
+            if chapter.start <= current_pos && chapter.end() >= current_pos {
+                return Some(chapter);
+            }
+        }
+        None
+    }
+
+    fn previous_chapter(&self) -> Option<MediaSourceChapter> {
+        let current_pos = self.sink.get_pos();
+        let chapters = self.chapters();
+        if chapters.is_empty() {
+            return None;
+        }
+        let mut last_chapter: Option<MediaSourceChapter> = None;
+        for chapter in chapters {
+            if chapter.start <= current_pos && chapter.end() >= current_pos {
+                break;
+            }
+            last_chapter = Some(chapter);
+        }
+
+        last_chapter
+    }
+
 
     // todo:
     // next, previous, set_volume, set_speed
@@ -208,11 +254,11 @@ impl Player {
                             self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Play() => {
-                            Player::play(sink);
+                            self.play();
                             self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Pause() => {
-                            Player::pause(sink);
+                            self.pause();
                             self.update_playing_status(&evt_tx).await;
                         }
                         PlayerCommand::Stop() => {
@@ -220,74 +266,72 @@ impl Player {
                             break;
                         },
                         PlayerCommand::Next() => {
-                            let current_pos = self.sink.get_pos();
-                            let current_item_option = self.media_source.find(self.loaded_id.as_str()).await;
-                            if current_item_option.is_none() {
-                                return;
-                            }
-                            let current_item = current_item_option.unwrap();
-                            let chapters = current_item.metadata.chapters;
-                            let mut next_chapter_pos : Option<Duration> = None;
-                            for chapter in chapters {
-                                if chapter.start > current_pos {
-                                    next_chapter_pos = Some(chapter.start);
-                                    break;
-                                }
-                            }
-                            if(next_chapter_pos.is_some()) {
-                                Player::try_seek(sink, next_chapter_pos.unwrap()).unwrap();
-                                self.update_position(&evt_tx, next_chapter_pos.unwrap()).await;
+                            let next_chapter = self.next_chapter();
+                            if(next_chapter.is_some()) {
+                                let new_pos = next_chapter.unwrap().start;
+                                self.try_seek(new_pos).unwrap();
+                                self.update_position(&evt_tx, new_pos).await;
                             } else {
                                 self.sink.skip_one()
                             }
                         }
-                        PlayerCommand::Previous() => {}
-                        PlayerCommand::SeekRelative(_) => {}
+                        PlayerCommand::Previous() => {
+                            let current_pos = sink.get_pos();
+                            if current_pos <= self.back_delay() {
+                                // todo: skip to previous playlist item
+                                // return
+                            }
+
+                            if let Some(current_chapter) = self.current_chapter()
+                                && current_pos - current_chapter.start > self.back_delay() {
+                                self.try_seek(current_chapter.start).unwrap();
+                                self.update_position(&evt_tx, current_chapter.start).await;
+
+                            } else if let Some(previous_chapter) = self.previous_chapter() {
+                                self.try_seek(previous_chapter.start).unwrap();
+                                self.update_position(&evt_tx, previous_chapter.start).await;
+
+                            } else {
+                                let zero = Duration::from_secs(0);
+                                self.try_seek(zero).unwrap();
+                                self.update_position(&evt_tx, zero).await;
+                            }
+                        }
+                        PlayerCommand::SeekRelative(millis) => {
+                            let new_pos = max(sink.get_pos().as_millis() as i64 + millis, 0) as u64;
+                            self.try_seek(Duration::from_millis(new_pos));
+                        }
                         PlayerCommand::SeekTo(_) => {}
                     }
                 }
 
                 _ = tokio::time::sleep(Duration::from_millis(500)) => {
                     self.update_position(&evt_tx, sink.get_pos()).await;
-                    // sink.get_pos()
-                    // let _ = evt_tx.send(PlayerEvent::Status(format!("Current name: {}", "<player name>")));
                 }
             }
         }
     }
 
     async fn update_position(&self, evt_tx: &mpsc::UnboundedSender<PlayerEvent>, pos: Duration) {
-        let _ = evt_tx.send(PlayerEvent::Position(self.loaded_id.to_string(), pos));
+        if let Some(item) = self.item.clone() {
+            let _ = evt_tx.send(PlayerEvent::Position(item.id.to_string(), pos));
+        }
     }
 
-    /*
-    async fn play(&self, p0: String) {
-        if p0 != "preftest" {
+    async fn update_playing_status(&self, evt_tx: &UnboundedSender<PlayerEvent>) {
+        let self_item_opt = self.item.clone();
+        if self_item_opt.is_none() {
             return;
         }
-
-        let path_string = "/tmp/alert-work.ogg";
-        let path_string_alternative = "/root/alert-work.ogg";
-        let mut path = Path::new(path_string);
-        if !path.exists() {
-            path = Path::new(path_string_alternative);
-            if !path.exists() {
-                return;
-            }
-
-        }<
-
-        let file = File::open(path).unwrap();
-        self.sink.append(rodio::Decoder::try_from(file).unwrap());
-        self.sink.sleep_until_end();
-    }
-
-     */
-    async fn update_playing_status(&self, evt_tx: &UnboundedSender<PlayerEvent>) {
+        let self_item_opt = self.item.clone();
+        if self_item_opt.is_none() {
+            return;
+        }
+        let self_item = self_item_opt.unwrap();
         if self.sink.is_paused() {
-            let _ = evt_tx.send(PlayerEvent::Status(self.loaded_id.to_string(), "paused".to_string()));
+            let _ = evt_tx.send(PlayerEvent::Status(self_item.id.to_string(), "paused".to_string()));
         } else {
-            let _ = evt_tx.send(PlayerEvent::Status(self.loaded_id.to_string(), "playing".to_string()));
+            let _ = evt_tx.send(PlayerEvent::Status(self_item.id.to_string(), "playing".to_string()));
         }
     }
 }
