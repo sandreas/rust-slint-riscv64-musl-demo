@@ -1,10 +1,11 @@
 
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import {SlintAudioPlayer, SlintMediaSourceItem} from "../globals.slint";
+import {SlintAudioPlayer, SlintMediaSourceItem, SlintIcons} from "../globals.slint";
 
 import { TogglePlayButton } from "buttons/TogglePlayButton.slint";
 import { NextButton } from "buttons/NextButton.slint";
 import { PreviousButton } from "buttons/PreviousButton.slint";
+import { IconButton } from "buttons/IconButton.slint";
 
 // icons see: https://docs.rs/lucide-slint/latest/lucide_slint/
 export component Player {
@@ -18,9 +19,17 @@ export component Player {
         }
         HorizontalBox {
             alignment: center;
-            if SlintAudioPlayer.current-item-id == item.id: PreviousButton {
+            if SlintAudioPlayer.current-item-id == item.id: IconButton {
+                icon: SlintIcons.previous;
                 clicked => {
                     SlintAudioPlayer.previous();
+                }
+            }
+
+            if SlintAudioPlayer.current-item-id == item.id: IconButton {
+                icon: SlintIcons.replay-10;
+                clicked => {
+                    SlintAudioPlayer.seek_relative(-10s);
                 }
             }
 
@@ -31,7 +40,15 @@ export component Player {
                 }
             }
 
-            if SlintAudioPlayer.current-item-id == item.id: NextButton {
+            if SlintAudioPlayer.current-item-id == item.id: IconButton {
+                icon: SlintIcons.replay-10;
+                clicked => {
+                    SlintAudioPlayer.seek_relative(10s);
+                }
+            }
+
+            if SlintAudioPlayer.current-item-id == item.id: IconButton {
+                icon: SlintIcons.next;
                 clicked => {
                     SlintAudioPlayer.next();
                 }

@@ -1,0 +1,17 @@
+import {
+    VerticalBox,
+} from "std-widgets.slint";
+
+
+export component IconButton inherits TouchArea {
+    in-out property <image> icon;
+    in-out property <physical-length> size: 48px;
+    VerticalBox {
+        padding:0px;
+        Image {
+            source: icon;
+            width: size;
+            height: size;
+        }
+    }
+}
