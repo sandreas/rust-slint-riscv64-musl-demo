@@ -1,8 +1,7 @@
-use std::{fs, io};
-use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-use std::path::{Path, PathBuf};
 use evdev::{Device, EventSummary, KeyCode};
-use tokio::sync::mpsc;
+use std::path::Path;
+use std::{fs, io};
+use tokio::sync::{mpsc, oneshot};
 
 #[derive(Debug)]
 pub enum HeadsetEvent {
@@ -14,6 +13,9 @@ pub enum HeadsetEvent {
 pub struct Headset {
     event_device: String,
     device: Option<Device>,
+    clicks: i32,
+    key_down: bool,
+    click_handler_cancel: Option<oneshot::Sender<()>>
 }
 
 #[derive(Debug,Clone)]
@@ -28,7 +30,10 @@ impl Headset {
     pub fn new(event_device: String) -> Headset {
         Self {
             event_device,
-            device: None
+            device: None,
+            clicks: 0,
+            key_down: false,
+            click_handler_cancel: None,
         }
     }
 
@@ -84,6 +89,7 @@ impl Headset {
         Ok(devices)
     }
 
+
     pub async fn run(
         &mut self,
         _/*evt_tx*/: mpsc::UnboundedSender<HeadsetEvent>,
@@ -101,7 +107,7 @@ impl Headset {
                     self.device = Some(device);
                 }
             }
-            
+
             if let Some(device) = &mut self.device {
                 for event in device.fetch_events().unwrap() {
                     // let _ = evt_tx.send(ev);
@@ -128,12 +134,6 @@ impl Headset {
                     }
                 }
             }
-                
-            
-            
-            
-            
-            
         }
     }
 }
