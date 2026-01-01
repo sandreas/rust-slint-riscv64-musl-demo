@@ -1,5 +1,5 @@
-use std::cmp::PartialEq;
 use clap::Parser;
+use std::cmp::PartialEq;
 use std::fs::OpenOptions;
 use std::io::Write;
 use tokio::sync::mpsc;
@@ -23,22 +23,20 @@ struct Args {
 }
 
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
-use sea_orm::{Database, DatabaseConnection, DbErr};
-use sea_orm_migration::MigratorTrait;
-use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, SharedVector, ToSharedString, VecModel};
-use std::{iter, thread};
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use std::sync::Arc;
-use std::time::Duration;
-use cpal::traits::{DeviceTrait, HostTrait};
-use evdev::Device;
-use lofty::picture::PictureType::CoverFront;
-use crate::headset::{Headset, HeadsetDevice, HeadsetEvent};
+use crate::headset::{Headset, HeadsetEvent};
 use crate::media_source::file_media_source::FileMediaSource;
 use crate::media_source::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
 use crate::player::player::{Player, PlayerCommand, PlayerEvent};
+use cpal::traits::{DeviceTrait, HostTrait};
+use sea_orm::{Database, DatabaseConnection, DbErr};
+use sea_orm_migration::MigratorTrait;
+use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString, VecModel};
+use std::path::Path;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::time::Duration;
+use std::iter;
 
 slint::include_modules!();
 
@@ -200,11 +198,13 @@ async fn main() -> Result<(), slint::PlatformError> {
 
      */
     // this part only works when USB-C is plugged in
-    let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+    // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
+
+    let player_cmd_tx_clone = player_cmd_tx.clone();
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
-        headset.run(head_event_tx).await;
+        headset.run(player_cmd_tx_clone).await;
     });
 
     let slint_app_window = MainWindow::new()?;

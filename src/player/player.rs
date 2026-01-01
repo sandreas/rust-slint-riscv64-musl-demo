@@ -3,16 +3,17 @@
 // load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
 
 use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceItem};
-use cpal::Device;
 use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::Device;
 use rodio::source::SeekError;
 use rodio::{OutputStream, OutputStreamBuilder, Sink, Source};
-use std::cmp::{max, min};
+use std::cmp::max;
 use std::fs::File;
 use std::io;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use chrono::DateTime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
@@ -29,7 +30,21 @@ pub enum PlayerCommand {
     Previous(),
     SeekRelative(i64),
     SeekTo(Duration),
+    HandleButton(ButtonKey, ButtonAction, SystemTime)
 }
+#[derive(Debug)]
+pub enum ButtonKey {
+    PlayPause,
+    VolumeUp,
+    VolumeDown,
+}
+#[derive(Debug)]
+pub enum ButtonAction {
+    Press,
+    Release
+}
+
+
 
 #[derive(Debug)]
 pub enum PlayerEvent {
@@ -282,7 +297,6 @@ impl Player {
 
 
                             PlayerCommand::Update(s) => {
-                                let x = s.clone();
                                 self.play_media(s.clone()).await;
                                 // format!("Playing {}", x)
                                 // todo: implement player.is_playing / player.status
@@ -318,7 +332,7 @@ impl Player {
                             },
                             PlayerCommand::Next() => {
                                 let next_chapter = self.next_chapter();
-                                if(next_chapter.is_some()) {
+                                if next_chapter.is_some() {
                                     let new_pos = next_chapter.unwrap().start;
                                     self.try_seek(new_pos).unwrap();
                                     self.update_position(&evt_tx, new_pos).await;
@@ -352,7 +366,8 @@ impl Player {
                                 let new_pos = max(sink.get_pos().as_millis() as i64 + millis, 0) as u64;
                                 self.try_seek(Duration::from_millis(new_pos));
                             }
-                            PlayerCommand::SeekTo(_) => {}
+                            PlayerCommand::SeekTo(_) => {},
+                            PlayerCommand::HandleButton(_, _, _) => todo!()
                         }
                     }
 
