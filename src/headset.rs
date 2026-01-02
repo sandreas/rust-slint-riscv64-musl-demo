@@ -1,23 +1,13 @@
+use crate::button_handler::{ButtonAction, ButtonKey};
+use crate::player::player::PlayerCommand::HandleButton;
+use crate::player::player::PlayerCommand;
 use evdev::{Device, EventSummary, KeyCode};
 use std::path::Path;
-use tokio::sync::{mpsc, oneshot};
-use crate::gpio_button_service::GpioButtonEvent::ButtonPressed;
-use crate::player::player::{ButtonAction, ButtonKey, PlayerCommand};
-use crate::player::player::PlayerCommand::HandleButton;
-
-#[derive(Debug)]
-pub enum HeadsetEvent {
-    PlayPause(),
-    VolumeUp(),
-    VolumeDown(),
-}
+use tokio::sync::mpsc;
 
 pub struct Headset {
     event_device: String,
     device: Option<Device>,
-    clicks: i32,
-    key_down: bool,
-    click_handler_cancel: Option<oneshot::Sender<()>>
 }
 
 impl Headset {
@@ -25,15 +15,11 @@ impl Headset {
         Self {
             event_device,
             device: None,
-            clicks: 0,
-            key_down: false,
-            click_handler_cancel: None,
         }
     }
 
     pub async fn run(
         &mut self,
-        // _/*evt_tx*/: mpsc::UnboundedSender<HeadsetEvent>,
         player_cmd_tx: mpsc::UnboundedSender<PlayerCommand>,
     ) {
 
@@ -55,12 +41,14 @@ impl Headset {
                     // let _ = evt_tx.send(ev);
                     match event.destructure() {
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
-                            let _ = player_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
+                            // let _ = player_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
                             println!("PLAYPAUSE PRESSED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
+                            let result = player_cmd_tx.send(PlayerCommand::Pause());
+
                             println!("PLAYPAUSE RELEASED: {:?}", ev);
-                            let _ = player_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
+                            // let _ = player_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
                             println!("VOLUME_UP PRESSED: {:?}", ev);

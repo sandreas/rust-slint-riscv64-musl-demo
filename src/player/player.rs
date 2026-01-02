@@ -2,6 +2,7 @@
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 // load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
 
+use crate::button_handler::{ButtonAction, ButtonKey};
 use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceItem};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
@@ -13,7 +14,6 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use chrono::DateTime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
@@ -32,19 +32,6 @@ pub enum PlayerCommand {
     SeekTo(Duration),
     HandleButton(ButtonKey, ButtonAction, SystemTime)
 }
-#[derive(Debug)]
-pub enum ButtonKey {
-    PlayPause,
-    VolumeUp,
-    VolumeDown,
-}
-#[derive(Debug)]
-pub enum ButtonAction {
-    Press,
-    Release
-}
-
-
 
 #[derive(Debug)]
 pub enum PlayerEvent {
@@ -277,6 +264,7 @@ impl Player {
         &mut self,
         mut cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
         evt_tx: mpsc::UnboundedSender<PlayerEvent>,
+        button_cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
     ) {
         let mut last_sink_update_attempt = SystemTime::now();
         loop {
@@ -290,12 +278,16 @@ impl Player {
             }
 
             if let Some(sink) = &self.sink {
+
+
+
+
+
+
                 tokio::select! {
                     Some(cmd) = cmd_rx.recv() => {
-
+                        println!("============== cmd received ==============");
                         match cmd {
-
-
                             PlayerCommand::Update(s) => {
                                 self.play_media(s.clone()).await;
                                 // format!("Playing {}", x)
@@ -367,7 +359,12 @@ impl Player {
                                 self.try_seek(Duration::from_millis(new_pos));
                             }
                             PlayerCommand::SeekTo(_) => {},
-                            PlayerCommand::HandleButton(_, _, _) => todo!()
+                            PlayerCommand::HandleButton(key, action, timestamp) => {
+                                // self.button_handler.handle_button(key, action, timestamp);
+                                println!("PlayerCommand::HandleButton");
+
+                                // self.button_handler.handle_button_event(/*key, */ action /*, timestamp*/);
+                            }
                         }
                     }
 

@@ -13,6 +13,7 @@ mod entity;
 
 pub mod serde_json_mods;
 mod media_source;
+mod button_handler;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -23,7 +24,7 @@ struct Args {
 }
 
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
-use crate::headset::{Headset, HeadsetEvent};
+use crate::headset::{Headset};
 use crate::media_source::file_media_source::FileMediaSource;
 use crate::media_source::media_source_trait::{MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture, MediaType};
 use crate::migrator::Migrator;
@@ -37,11 +38,9 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 use std::iter;
+use crate::button_handler::{ButtonHandler, ButtonKey};
 
 slint::include_modules!();
-
-
-
 
 
 async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection, DbErr> {
@@ -172,11 +171,33 @@ async fn main() -> Result<(), slint::PlatformError> {
     tokio::spawn(file_source.clone().run(source_cmd_rx, source_evt_tx));
 
 
+
+
     let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
+
+    let (button_cmd_tx, button_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+
+    // let mut handler = ButtonHandler::new();
+    /*
+    handler.add_click_action(ButtonKey::PlayPause, 1, Box::new(|| {
+        println!("A single-click");
+    }));
+
+    handler.add_click_action(ButtonKey::PlayPause, 2, Box::new(|| {
+        println!("A double-click");
+    }));
+
+    handler.add_hold_action(ButtonKey::PlayPause, 1, Box::new(|| {
+        println!("A hold after 1 click");
+    }));
+     */
+    // handler.on_click(|| println!("CLICK"));
+    // handler.on_hold(|| println!("HOLD"));
+
     tokio::spawn(async move {
         let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
-        player.run(player_cmd_rx, player_evt_tx).await;
+        player.run(player_cmd_rx, player_evt_tx, button_cmd_rx).await;
     });
 
     /*
@@ -200,11 +221,11 @@ async fn main() -> Result<(), slint::PlatformError> {
     // this part only works when USB-C is plugged in
     // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
 
-    let player_cmd_tx_clone = player_cmd_tx.clone();
+    let button_cmd_tx_clone = button_cmd_tx.clone();
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
-        headset.run(player_cmd_tx_clone).await;
+        headset.run(button_cmd_tx_clone).await;
     });
 
     let slint_app_window = MainWindow::new()?;
