@@ -14,6 +14,7 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
@@ -262,9 +263,9 @@ impl Player {
 
     pub async fn run(
         &mut self,
-        mut cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
-        evt_tx: mpsc::UnboundedSender<PlayerEvent>,
-        button_cmd_rx: mpsc::UnboundedReceiver<PlayerCommand>,
+        mut cmd_rx: UnboundedReceiver<PlayerCommand>,
+        mut button_cmd_rx: UnboundedReceiver<PlayerCommand>,
+        evt_tx: UnboundedSender<PlayerEvent>,
     ) {
         let mut last_sink_update_attempt = SystemTime::now();
         loop {
@@ -278,13 +279,18 @@ impl Player {
             }
 
             if let Some(sink) = &self.sink {
-
-
-
-
-
-
                 tokio::select! {
+                    /*
+                    // this part makes the UI crash
+                    Some(btn_cmd) = button_cmd_rx.recv() => {
+                        match btn_cmd {
+                            PlayerCommand::HandleButton(key,action,timestamp) => {
+                                println!("===== handle button =====");
+                            }
+                            _ => {}
+                        }
+                    }
+                    */
                     Some(cmd) = cmd_rx.recv() => {
                         println!("============== cmd received ==============");
                         match cmd {
@@ -359,18 +365,40 @@ impl Player {
                                 self.try_seek(Duration::from_millis(new_pos));
                             }
                             PlayerCommand::SeekTo(_) => {},
-                            PlayerCommand::HandleButton(key, action, timestamp) => {
-                                // self.button_handler.handle_button(key, action, timestamp);
-                                println!("PlayerCommand::HandleButton");
-
-                                // self.button_handler.handle_button_event(/*key, */ action /*, timestamp*/);
-                            }
+                            _ => {}
                         }
                     }
 
                     _ = tokio::time::sleep(Duration::from_millis(500)) => {
                         self.update_position(&evt_tx, sink.get_pos()).await;
                     }
+                }
+
+
+
+            }
+        }
+    }
+
+    pub async fn run_buttons(
+        &mut self,
+        mut cmd_rx: UnboundedReceiver<PlayerCommand>,
+    ) {
+        loop {
+            if let Some(sink) = &self.sink {
+                tokio::select! {
+                    Some(cmd) = cmd_rx.recv() => {
+                        println!("============== run_buttons cmd received ==============");
+                        match cmd {
+                            PlayerCommand::HandleButton(ButtonKey, ButtonAction, SystemTime) => {
+                                if ButtonAction == ButtonAction::Release {
+                                    self.toggle()
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+
                 }
             }
         }

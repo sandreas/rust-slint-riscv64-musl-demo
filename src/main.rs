@@ -176,7 +176,10 @@ async fn main() -> Result<(), slint::PlatformError> {
     let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
 
-    let (button_cmd_tx, button_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+
+
+    let (player_button_cmd_tx, mut player_button_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+
 
     // let mut handler = ButtonHandler::new();
     /*
@@ -195,10 +198,21 @@ async fn main() -> Result<(), slint::PlatformError> {
     // handler.on_click(|| println!("CLICK"));
     // handler.on_hold(|| println!("HOLD"));
 
+    let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
     tokio::spawn(async move {
-        let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
-        player.run(player_cmd_rx, player_evt_tx, button_cmd_rx).await;
+        player.run(player_cmd_rx, player_button_cmd_rx, player_evt_tx).await;
     });
+
+
+    /*
+    let (xplayer_cmd_tx, xplayer_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
+    let (xplayer_evt_tx, mut xplayer_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
+
+    // value player used after move
+    tokio::spawn(async move {
+        player.run(xplayer_cmd_rx, xplayer_evt_tx).await;
+    });
+    */
 
     /*
     tokio::spawn(async move {
@@ -221,12 +235,12 @@ async fn main() -> Result<(), slint::PlatformError> {
     // this part only works when USB-C is plugged in
     // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
 
-    let button_cmd_tx_clone = button_cmd_tx.clone();
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
-        headset.run(button_cmd_tx_clone).await;
+        headset.run(player_button_cmd_tx).await;
     });
+
 
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
@@ -427,11 +441,12 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     slint::spawn_local(async move {
         // now owned in this async block
-        let mut player_evt_rx = player_evt_rx;
 
         while let Some(event) = player_evt_rx.recv().await {
             if let Some(ui) = ui_handle_player.upgrade() {
                 let inner = ui.global::<SlintAudioPlayer>();
+
+
 
                 match event {
                     PlayerEvent::Status(item_id, status) => {
