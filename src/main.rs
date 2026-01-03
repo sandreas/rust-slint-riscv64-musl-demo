@@ -36,9 +36,14 @@ use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, Share
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use std::iter;
-use crate::button_handler::{ButtonHandler, ButtonKey};
+use evdev_rs_tokio::{Device, ReadFlag};
+use evdev_rs_tokio::enums::EV_KEY::KEY_PLAYPAUSE;
+use evdev_rs_tokio::enums::EventCode::EV_KEY;
+use tokio::fs::File;
+use crate::button_handler::{ButtonAction, ButtonHandler, ButtonKey};
+use crate::player::player::PlayerCommand::HandleButton;
 
 slint::include_modules!();
 
@@ -200,7 +205,8 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
     tokio::spawn(async move {
-        player.run(player_cmd_rx, player_button_cmd_rx, player_evt_tx).await;
+        let headset_button_event_device = "/dev/input/event13";
+        player.run(player_cmd_rx, player_evt_tx, player_button_cmd_rx).await;
     });
 
 
@@ -235,15 +241,23 @@ async fn main() -> Result<(), slint::PlatformError> {
     // this part only works when USB-C is plugged in
     // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
 
+
+
+
+    /*
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
         headset.run(player_button_cmd_tx).await;
     });
+    */
+
 
 
     let slint_app_window = MainWindow::new()?;
     // slint_app_window.set_items(slint_items);
+
+
 
     /*
     // let slint_app_window_weak = slint_app_window.as_weak();
@@ -254,6 +268,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
     */
 
+    let slint_audio_player_other = slint_app_window.global::<SlintAudioPlayer>();
 
     let slint_audio_player = slint_app_window.global::<SlintAudioPlayer>();
     slint_audio_player.on_play_test({
@@ -437,11 +452,15 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     }).unwrap();
 
+
+
     let ui_handle_player = slint_media_source_ui.as_weak();
 
     slint::spawn_local(async move {
-        // now owned in this async block
 
+        // todo: Maybe the headset magic needs to happen here?
+
+        // now owned in this async block
         while let Some(event) = player_evt_rx.recv().await {
             if let Some(ui) = ui_handle_player.upgrade() {
                 let inner = ui.global::<SlintAudioPlayer>();
@@ -472,6 +491,49 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     }).unwrap();
 
+
+    // this kills the ability to navigate or click something
+    /*
+    let slint_ui_headset = slint_app_window.clone_strong();
+    slint::spawn_local(async move {
+        let device_path ="/dev/input/event13";
+        let player = slint_ui_headset.global::<SlintAudioPlayer>();
+        let file = File::open(device_path).await.unwrap();
+        let mut d = evdev_rs_tokio::Device::new_from_file(file).unwrap();
+
+        loop {
+            let ev = d.next_event(ReadFlag::NORMAL | ReadFlag::BLOCKING).map(|val| val.1);
+            match ev {
+                Ok(ev) => {
+
+                    match ev.event_code {
+                        EV_KEY(key) => {
+                            // value = 1 => keydown
+                            if key == KEY_PLAYPAUSE && ev.value == 0 {
+                                player.invoke_play();
+                            }
+
+                            println!("Event: {:?}, Value: {}", key, ev.value);
+                        }
+                        _ => {}
+                    }
+
+                    /*
+                    println!("Event: time {}.{}, ++++++++++{}++++++++++ {} +++++++++++++++",
+                                   ev.time.tv_sec,
+                                   ev.time.tv_usec,
+                                    ev.value,
+                                   ev.event_type().map(|ev_type| format!("{}", ev_type)).unwrap_or("".to_owned()))
+                    */
+                },
+
+                Err(e) => (),
+            }
+        }
+
+    }).unwrap();
+    */
+    
     slint_app_window.run()
 }
 

@@ -14,10 +14,12 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use evdev::{EventSummary, KeyCode};
 use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
+use crate::player::player::PlayerCommand::HandleButton;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
@@ -47,6 +49,7 @@ pub struct Player {
     fallback_device_name: String,
     stream: Option<OutputStream>, // when removed, the samples do not play
     sink: Option<Sink>,
+    headset: Option<evdev::Device>,
     item: Option<MediaSourceItem>,
 }
 
@@ -63,6 +66,7 @@ impl Player {
             fallback_device_name,
             stream: None,
             sink: None,
+            headset: None,
             item: None,
         }
     }
@@ -76,6 +80,17 @@ impl Player {
             let stream = builder.open_stream_or_fallback().unwrap();
             self.sink = Some(Sink::connect_new(stream.mixer()));
             self.stream = Some(stream);
+        }
+    }
+
+    pub fn connect_headset(&mut self, device_path:&Path) {
+        if !Path::exists(device_path) {
+            return;
+        }
+
+        let device_result = evdev::Device::open(device_path);
+        if let Ok(device) = device_result {
+            self.headset = Some(device);
         }
     }
 
@@ -264,10 +279,15 @@ impl Player {
     pub async fn run(
         &mut self,
         mut cmd_rx: UnboundedReceiver<PlayerCommand>,
-        mut button_cmd_rx: UnboundedReceiver<PlayerCommand>,
         evt_tx: UnboundedSender<PlayerEvent>,
+        mut button_cmd_rx: UnboundedReceiver<PlayerCommand>,
     ) {
+        // todo:
+        // Probably we must spawn the threads here?
+
+
         let mut last_sink_update_attempt = SystemTime::now();
+        let mut last_headset_update_attempt = SystemTime::now();
         loop {
             // polling in case the audio hardware has not been successfully initialized yet
 
@@ -278,10 +298,51 @@ impl Player {
                 last_sink_update_attempt = now;
             }
 
+            /*
+            if self.headset.is_none() && last_headset_update_attempt + Duration::from_millis(2000) < now {
+                self.connect_headset(Path::new(headset_button_event_device));
+                last_headset_update_attempt = now;
+            }
+            */
             if let Some(sink) = &self.sink {
+
+                /*
+                if let Some(headset) = &mut self.headset {
+                    for event in headset.fetch_events().unwrap() {
+                        match event.destructure() {
+                            EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
+                                println!("PLAYPAUSE PRESSED: {:?}", ev);
+                            },
+                            EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
+                                println!("PLAYPAUSE RELEASED: {:?}", ev);
+                            },
+                            EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
+                                println!("VOLUME_UP PRESSED: {:?}", ev);
+                            },
+                            EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 0) => {
+                                println!("VOLUME_UP RELEASED: {:?}", ev);
+                            },
+                            EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 1) => {
+                                println!("VOLUME_DOWN PRESSED: {:?}", ev);
+                            },
+                            EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 0) => {
+                                println!("VOLUME_DOWN RELEASED: {:?}", ev);
+                            },
+                            _ => { }
+                        }
+                    }
+                }
+
+                 */
+
+
+
                 tokio::select! {
-                    /*
+
+
+
                     // this part makes the UI crash
+                    /*
                     Some(btn_cmd) = button_cmd_rx.recv() => {
                         match btn_cmd {
                             PlayerCommand::HandleButton(key,action,timestamp) => {
@@ -290,7 +351,9 @@ impl Player {
                             _ => {}
                         }
                     }
-                    */
+
+                     */
+
                     Some(cmd) = cmd_rx.recv() => {
                         println!("============== cmd received ==============");
                         match cmd {
