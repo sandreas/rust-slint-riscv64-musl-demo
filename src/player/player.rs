@@ -2,7 +2,6 @@
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 // load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
 
-use crate::button_handler::{ButtonAction, ButtonKey};
 use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceItem};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
@@ -33,12 +32,18 @@ pub enum PlayerCommand {
     SeekTo(Duration),
 }
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TriggerAction {
+    Toggle,
+}
+
 #[derive(Debug)]
 pub enum PlayerEvent {
     Status(String, String),
     Position(String, Duration),
     Stopped,
-    HandleButton(ButtonKey, ButtonAction, SystemTime)
+    ExternalTrigger(TriggerAction)
 }
 
 pub struct Player {

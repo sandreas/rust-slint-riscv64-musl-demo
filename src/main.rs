@@ -14,6 +14,7 @@ mod entity;
 pub mod serde_json_mods;
 mod media_source;
 mod button_handler;
+mod debouncer;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -35,11 +36,10 @@ use sea_orm_migration::MigratorTrait;
 use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString, VecModel};
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use std::{iter, thread};
-use crate::button_handler::{ButtonAction, ButtonHandler, ButtonKey};
-use crate::player::player::PlayerEvent::HandleButton;
+use crate::player::player::PlayerEvent::ExternalTrigger;
 
 slint::include_modules!();
 
@@ -206,7 +206,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
-        headset.run(ptx);
+        headset.run(ptx).await;
     });
 
 
@@ -473,9 +473,19 @@ async fn main() -> Result<(), slint::PlatformError> {
     slint::spawn_local(async move {
         // now owned in this async block
 
+        // let button_handler = ButtonHandler::new();
+
+
+
+        let mut count_clicks = 0;
+        let mut hold = false;
+
+
         while let Some(event) = player_evt_rx.recv().await {
             if let Some(ui) = ui_handle_player.upgrade() {
-                let inner = ui.global::<SlintAudioPlayer>();
+
+                let mut inner = ui.global::<SlintAudioPlayer>();
+
                 match event {
                     PlayerEvent::Status(item_id, status) => {
                         inner.set_current_item_id(item_id.to_shared_string());
@@ -492,9 +502,32 @@ async fn main() -> Result<(), slint::PlatformError> {
                         inner.set_current_item_id(item_id.to_shared_string());
                         inner.set_position_formatted(format_duration(position).to_shared_string());
                     },
-                    PlayerEvent::HandleButton(key, value, timestamp) =>  {
-                        inner.invoke_play();
-                        // println!("handlebutton event handling");
+                    PlayerEvent::ExternalTrigger(trigger_action) =>  {
+
+                        println!("trigger action: {:?}", trigger_action);
+                        /*
+                        if value == ButtonAction::Press {
+                            hold = true;
+                        } else if value == ButtonAction::Release {
+                            hold = false;
+                            count_clicks = count_clicks + 1;
+                        }
+
+
+                        let clicks = count_clicks;
+                        let is_hold = hold;
+
+                        let player_arc = Arc::new(Mutex::new(inner)).clone();
+                        debouncer.call(move || {
+                            async move {
+                                let mut player = player_arc.lock().unwrap();
+                                match clicks {
+                                    1 => player.invoke_play(),
+                                    _ => {}
+                                }
+                            }
+                        }).await;
+                        */
                     }
                     _ => {}
                 }
