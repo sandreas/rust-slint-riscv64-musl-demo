@@ -1,5 +1,4 @@
 use crate::button_handler::{ButtonAction, ButtonKey};
-use crate::player::player::PlayerCommand::HandleButton;
 use crate::player::player::PlayerCommand;
 use evdev::{Device, EventSummary, KeyCode};
 use std::path::Path;
@@ -18,7 +17,7 @@ impl Headset {
         }
     }
 
-    pub async fn run(
+    pub fn run(
         &mut self,
         player_button_cmd_tx: mpsc::UnboundedSender<PlayerCommand>,
     ) {
@@ -41,27 +40,27 @@ impl Headset {
                     // let _ = evt_tx.send(ev);
                     match event.destructure() {
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
+                            // let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
                             println!("PLAYPAUSE PRESSED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
+                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
                             println!("PLAYPAUSE RELEASED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
                             println!("VOLUME_UP PRESSED: {:?}", ev);
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeUp, ButtonAction::Press, ev.timestamp()));
+                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeUp, ButtonAction::Press, ev.timestamp()));
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 0) => {
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeUp, ButtonAction::Release, ev.timestamp()));
+                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeUp, ButtonAction::Release, ev.timestamp()));
                             println!("VOLUME_UP RELEASED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 1) => {
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeDown, ButtonAction::Press, ev.timestamp()));
+                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeDown, ButtonAction::Press, ev.timestamp()));
                             println!("VOLUME_DOWN PRESSED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEDOWN, 0) => {
-                            let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeDown, ButtonAction::Release, ev.timestamp()));
+                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::VolumeDown, ButtonAction::Release, ev.timestamp()));
                             println!("VOLUME_DOWN RELEASED: {:?}", ev);
                         },
                         _ => println!("got a different event: {:?}", event.destructure())

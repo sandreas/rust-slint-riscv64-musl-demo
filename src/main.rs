@@ -36,9 +36,10 @@ use slint::{ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, Share
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
-use std::iter;
-use crate::button_handler::{ButtonHandler, ButtonKey};
+use std::time::{Duration, SystemTime};
+use std::{iter, thread};
+use crate::button_handler::{ButtonAction, ButtonHandler, ButtonKey};
+use crate::player::player::PlayerEvent::HandleButton;
 
 slint::include_modules!();
 
@@ -177,10 +178,6 @@ async fn main() -> Result<(), slint::PlatformError> {
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
 
 
-
-    let (player_button_cmd_tx, mut player_button_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
-
-
     // let mut handler = ButtonHandler::new();
     /*
     handler.add_click_action(ButtonKey::PlayPause, 1, Box::new(|| {
@@ -199,8 +196,20 @@ async fn main() -> Result<(), slint::PlatformError> {
     // handler.on_hold(|| println!("HOLD"));
 
     let mut player = Player::new(Arc::new(file_source.clone()), "USB-C to 3.5mm Headphone Jack A".to_string(), "pipewire".to_string());
+    let mut ptx = player_evt_tx.clone();
+
+
     tokio::spawn(async move {
-        player.run(player_cmd_rx, player_button_cmd_rx, player_evt_tx).await;
+        player.run(player_cmd_rx, player_evt_tx.clone()).await;
+    });
+
+
+    tokio::spawn(async move {
+        loop {
+            thread::sleep(Duration::from_secs(10));
+            println!("background thread 10s mark");
+            let _ = ptx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, SystemTime::now()));
+        }
     });
 
 
@@ -235,14 +244,26 @@ async fn main() -> Result<(), slint::PlatformError> {
     // this part only works when USB-C is plugged in
     // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
 
+    /*
     tokio::spawn(async move {
         let device_path ="/dev/input/event13";
         let mut headset = Headset::new(device_path.to_string());
-        headset.run(player_button_cmd_tx).await;
+        headset.run(player_button_cmd_tx);
     });
+    */
+
+
+
+
+
 
 
     let slint_app_window = MainWindow::new()?;
+
+
+
+
+
     // slint_app_window.set_items(slint_items);
 
     /*
@@ -318,6 +339,11 @@ async fn main() -> Result<(), slint::PlatformError> {
             tx.send(PlayerCommand::SeekTo(Duration::from_millis(millis_i64 as u64))).unwrap();
         }
     });
+
+
+
+
+
 
     let slint_preferences = slint_app_window.global::<SlintPreferences>();
     // load_preferences(&slint_preferences);
@@ -407,6 +433,9 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
 
+
+
+
     let ui_handle = slint_media_source_ui.as_weak();
     slint::spawn_local(async move {
         // now owned in this async block
@@ -445,9 +474,6 @@ async fn main() -> Result<(), slint::PlatformError> {
         while let Some(event) = player_evt_rx.recv().await {
             if let Some(ui) = ui_handle_player.upgrade() {
                 let inner = ui.global::<SlintAudioPlayer>();
-
-
-
                 match event {
                     PlayerEvent::Status(item_id, status) => {
                         inner.set_current_item_id(item_id.to_shared_string());
@@ -463,7 +489,11 @@ async fn main() -> Result<(), slint::PlatformError> {
                          */
                         inner.set_current_item_id(item_id.to_shared_string());
                         inner.set_position_formatted(format_duration(position).to_shared_string());
+                    },
+                    PlayerEvent::HandleButton(_, _, _) =>  {
+                        println!("handlebutton event handling");
                     }
+                    _ => {}
                 }
             } else {
                 // UI was dropped; stop listening

@@ -31,7 +31,6 @@ pub enum PlayerCommand {
     Previous(),
     SeekRelative(i64),
     SeekTo(Duration),
-    HandleButton(ButtonKey, ButtonAction, SystemTime)
 }
 
 #[derive(Debug)]
@@ -39,6 +38,7 @@ pub enum PlayerEvent {
     Status(String, String),
     Position(String, Duration),
     Stopped,
+    HandleButton(ButtonKey, ButtonAction, SystemTime)
 }
 
 pub struct Player {
@@ -264,7 +264,6 @@ impl Player {
     pub async fn run(
         &mut self,
         mut cmd_rx: UnboundedReceiver<PlayerCommand>,
-        mut button_cmd_rx: UnboundedReceiver<PlayerCommand>,
         evt_tx: UnboundedSender<PlayerEvent>,
     ) {
         let mut last_sink_update_attempt = SystemTime::now();
@@ -280,8 +279,9 @@ impl Player {
 
             if let Some(sink) = &self.sink {
                 tokio::select! {
-                    /*
+
                     // this part makes the UI crash
+                    /*
                     Some(btn_cmd) = button_cmd_rx.recv() => {
                         match btn_cmd {
                             PlayerCommand::HandleButton(key,action,timestamp) => {
@@ -290,7 +290,9 @@ impl Player {
                             _ => {}
                         }
                     }
-                    */
+
+                     */
+
                     Some(cmd) = cmd_rx.recv() => {
                         println!("============== cmd received ==============");
                         match cmd {
@@ -380,6 +382,7 @@ impl Player {
         }
     }
 
+    /*
     pub async fn run_buttons(
         &mut self,
         mut cmd_rx: UnboundedReceiver<PlayerCommand>,
@@ -403,7 +406,7 @@ impl Player {
             }
         }
     }
-
+    */
     async fn update_position(&self, evt_tx: &mpsc::UnboundedSender<PlayerEvent>, pos: Duration) {
         if let Some(item) = self.item.clone() {
             let _ = evt_tx.send(PlayerEvent::Position(item.id.to_string(), pos));
