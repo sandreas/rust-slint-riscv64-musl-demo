@@ -203,7 +203,14 @@ async fn main() -> Result<(), slint::PlatformError> {
         player.run(player_cmd_rx, player_evt_tx.clone()).await;
     });
 
+    tokio::spawn(async move {
+        let device_path ="/dev/input/event13";
+        let mut headset = Headset::new(device_path.to_string());
+        headset.run(ptx);
+    });
 
+
+    /*
     tokio::spawn(async move {
         loop {
             thread::sleep(Duration::from_secs(10));
@@ -211,7 +218,7 @@ async fn main() -> Result<(), slint::PlatformError> {
             let _ = ptx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, SystemTime::now()));
         }
     });
-
+    */
 
     /*
     let (xplayer_cmd_tx, xplayer_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
@@ -244,13 +251,8 @@ async fn main() -> Result<(), slint::PlatformError> {
     // this part only works when USB-C is plugged in
     // let (head_event_tx, mut head_event_rx) = mpsc::unbounded_channel::<HeadsetEvent>();
 
-    /*
-    tokio::spawn(async move {
-        let device_path ="/dev/input/event13";
-        let mut headset = Headset::new(device_path.to_string());
-        headset.run(player_button_cmd_tx);
-    });
-    */
+
+
 
 
 
@@ -490,8 +492,9 @@ async fn main() -> Result<(), slint::PlatformError> {
                         inner.set_current_item_id(item_id.to_shared_string());
                         inner.set_position_formatted(format_duration(position).to_shared_string());
                     },
-                    PlayerEvent::HandleButton(_, _, _) =>  {
-                        println!("handlebutton event handling");
+                    PlayerEvent::HandleButton(key, value, timestamp) =>  {
+                        inner.invoke_play();
+                        // println!("handlebutton event handling");
                     }
                     _ => {}
                 }

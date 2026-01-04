@@ -1,5 +1,5 @@
 use crate::button_handler::{ButtonAction, ButtonKey};
-use crate::player::player::PlayerCommand;
+use crate::player::player::{PlayerCommand, PlayerEvent};
 use evdev::{Device, EventSummary, KeyCode};
 use std::path::Path;
 use tokio::sync::mpsc;
@@ -19,7 +19,7 @@ impl Headset {
 
     pub fn run(
         &mut self,
-        player_button_cmd_tx: mpsc::UnboundedSender<PlayerCommand>,
+        evt_tx: mpsc::UnboundedSender<PlayerEvent>,
     ) {
 
         loop {
@@ -41,10 +41,12 @@ impl Headset {
                     match event.destructure() {
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
                             // let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
+                            let _ = evt_tx.send(PlayerEvent::HandleButton(ButtonKey::PlayPause, ButtonAction::Press, ev.timestamp()));
                             println!("PLAYPAUSE PRESSED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 0) => {
-                            //let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
+                            // let _ = player_button_cmd_tx.send(HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
+                            let _ = evt_tx.send(PlayerEvent::HandleButton(ButtonKey::PlayPause, ButtonAction::Release, ev.timestamp()));
                             println!("PLAYPAUSE RELEASED: {:?}", ev);
                         },
                         EventSummary::Key(ev, KeyCode::KEY_VOLUMEUP, 1) => {
