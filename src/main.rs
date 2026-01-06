@@ -429,10 +429,12 @@ async fn main() -> Result<(), slint::PlatformError> {
     let btn_is_down = Arc::new(Mutex::new(false));
     let btn_is_down_clone = btn_is_down.clone();
 
+    // let btn_ongoing = Arc::new(Mutex::new(false));
+    // let btn_ongoing_clone = btn_ongoing.clone();
+
     let debouncer = Debouncer::new(Duration::from_millis(500), DebounceMode::Trailing);
     let debouncer_clone = debouncer.clone();
 
-    let (tx, rx) = mpsc::unbounded_channel::<HeadsetEvent>();
     let handle = thread::spawn(move || {
         let device_path = "/dev/input/event13";
         let device_result = Device::open(device_path);
@@ -449,12 +451,14 @@ async fn main() -> Result<(), slint::PlatformError> {
                             "event: PRESS | trigger_time: {} | process_time: {}",
                             iso, now_format
                         );
-                        tx.send(HeadsetEvent::Press(HeadsetButton::PlayPause))
-                            .unwrap();
 
                         let mut hold_guard = btn_is_down.lock().unwrap();
                         *hold_guard = true;
                         drop(hold_guard);
+
+                        // let mut ongoing_guard = btn_ongoing.lock().unwrap();
+                        // *ongoing_guard = true;
+                        // drop(ongoing_guard);
 
                         debouncer_clone.trigger();
                         // println!("debouncer.trigger()");
@@ -468,8 +472,6 @@ async fn main() -> Result<(), slint::PlatformError> {
                             "event: RELEASE | trigger_time: {} | process_time: {}",
                             iso, now_format
                         );
-                        tx.send(HeadsetEvent::Release(HeadsetButton::PlayPause))
-                            .unwrap();
 
                         // we ignore releasing after a hold by setting hold = false when the debouncer triggers
                         let mut hold_guard = btn_is_down.lock().unwrap();
@@ -503,14 +505,17 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
                     if *clicks_guard > 0 || *hold_guard {
-
                         let trigger_action_opt: Option<TriggerAction> = if *hold_guard {
                             match *clicks_guard {
+                                0 => Some(TriggerAction::StepBack),
+                                1 => Some(TriggerAction::StepForward),
                                 _ => None
                             }
                         } else {
                             match *clicks_guard {
                                 1 => Some(TriggerAction::Toggle),
+                                2 => Some(TriggerAction::Next),
+                                3 => Some(TriggerAction::Previous),
                                 _ => None
                             }
                         };
@@ -519,6 +524,8 @@ async fn main() -> Result<(), slint::PlatformError> {
                         }
 
                         println!("debouncer exec  | btn_repeat_count: {}, btn_state: {:?}", *clicks_guard, *hold_guard);
+                    } else {
+                        let _ = player_evt_tx_clone.send(PlayerEvent::ExternalTrigger(TriggerAction::StopOngoing));
                     }
 
                     *clicks_guard = 0;
@@ -761,6 +768,15 @@ async fn main() -> Result<(), slint::PlatformError> {
                                 inner.invoke_pause();
                             } else {
                                 inner.invoke_play();
+                            }
+                            TriggerAction::Next => {inner.invoke_next();}
+                            TriggerAction::Previous => {inner.invoke_previous();}
+                            TriggerAction::StepBack => {inner.invoke_seek_relative(-15000);}
+                            TriggerAction::StepForward => {inner.invoke_seek_relative(15000);}
+                            TriggerAction::StopOngoing => if inner.get_status().to_string() == "playing" {
+                                inner.invoke_play();
+                            } else {
+                                inner.invoke_pause();
                             }
                             _ => {}
                         }
