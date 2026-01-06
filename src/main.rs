@@ -33,7 +33,7 @@ use crate::media_source::media_source_trait::{
 };
 use crate::migrator::Migrator;
 use crate::player::player::PlayerEvent::ExternalTrigger;
-use crate::player::player::{Player, PlayerCommand, PlayerEvent};
+use crate::player::player::{Player, PlayerCommand, PlayerEvent, TriggerAction};
 use chrono::{DateTime, Utc};
 use cpal::traits::{DeviceTrait, HostTrait};
 use evdev::{Device, EventSummary, KeyCode};
@@ -79,6 +79,7 @@ use tokio::time::{ Instant};
 pub use parking_lot::{Mutex, MutexGuard};
 #[cfg(not(feature = "parking_lot"))]
 pub use std::sync::{MutexGuard};
+use crate::HeadsetButton::PlayPause;
 
 #[cfg(not(feature = "parking_lot"))]
 pub trait MutexExt<T> {
@@ -407,12 +408,14 @@ async fn main() -> Result<(), slint::PlatformError> {
     let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
 
+    let player_evt_tx_clone = player_evt_tx.clone();
+
+
     let mut player = Player::new(
         Arc::new(file_source.clone()),
         "USB-C to 3.5mm Headphone Jack A".to_string(),
         "pipewire".to_string(),
     );
-    let ptx = player_evt_tx.clone();
 
     tokio::spawn(async move {
         player.run(player_cmd_rx, player_evt_tx.clone()).await;
@@ -500,6 +503,21 @@ async fn main() -> Result<(), slint::PlatformError> {
 
 
                     if *clicks_guard > 0 || *hold_guard {
+
+                        let trigger_action_opt: Option<TriggerAction> = if *hold_guard {
+                            match *clicks_guard {
+                                _ => None
+                            }
+                        } else {
+                            match *clicks_guard {
+                                1 => Some(TriggerAction::Toggle),
+                                _ => None
+                            }
+                        };
+                        if trigger_action_opt.is_some() {
+                            let _ = player_evt_tx_clone.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
+                        }
+
                         println!("debouncer exec  | btn_repeat_count: {}, btn_state: {:?}", *clicks_guard, *hold_guard);
                     }
 
@@ -736,8 +754,16 @@ async fn main() -> Result<(), slint::PlatformError> {
                         inner.set_position_formatted(format_duration(position).to_shared_string());
                     }
                     PlayerEvent::ExternalTrigger(trigger_action) => {
-                        println!("trigger action: {:?}", trigger_action);
+                        // println!("trigger action: {:?}", trigger_action);
 
+                        match trigger_action {
+                            TriggerAction::Toggle => if inner.get_status().to_string() == "playing" {
+                                inner.invoke_pause();
+                            } else {
+                                inner.invoke_play();
+                            }
+                            _ => {}
+                        }
                     }
                     _ => {}
                 }
