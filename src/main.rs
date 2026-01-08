@@ -15,6 +15,8 @@ mod button_handler;
 mod media_source;
 pub mod serde_json_mods;
 
+const MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY: u64 = 250;
+const MAGIC_REPETITIVE_ACTION_DELAY: u64 = 850;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -25,14 +27,12 @@ struct Args {
 }
 
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
-use crate::headset::Headset;
 use crate::media_source::file_media_source::FileMediaSource;
 use crate::media_source::media_source_trait::{
     MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture,
     MediaType,
 };
 use crate::migrator::Migrator;
-use crate::player::player::PlayerEvent::ExternalTrigger;
 use crate::player::player::{Player, PlayerCommand, PlayerEvent, TriggerAction};
 use chrono::{DateTime, Utc};
 use cpal::traits::{DeviceTrait, HostTrait};
@@ -43,14 +43,13 @@ use slint::{
     ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString,
     VecModel,
 };
+use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use std::{iter, thread};
-use std::marker::PhantomData;
 use tokio::select;
-use tokio::time::sleep;
 
 slint::include_modules!();
 
@@ -71,15 +70,14 @@ slint::include_modules!();
 
 
 use tokio::sync::Notify;
-use tokio::time::{ Instant};
-
+use tokio::time::Instant;
 
 
 #[cfg(feature = "parking_lot")]
 pub use parking_lot::{Mutex, MutexGuard};
 #[cfg(not(feature = "parking_lot"))]
-pub use std::sync::{MutexGuard};
-use crate::HeadsetButton::PlayPause;
+pub use std::sync::MutexGuard;
+use tokio::task::JoinHandle;
 
 #[cfg(not(feature = "parking_lot"))]
 pub trait MutexExt<T> {
@@ -409,6 +407,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
 
     let player_evt_tx_clone = player_evt_tx.clone();
+    let player_evt_tx_clone2 = player_evt_tx.clone();
 
 
     let mut player = Player::new(
@@ -429,17 +428,47 @@ async fn main() -> Result<(), slint::PlatformError> {
     let btn_is_down = Arc::new(Mutex::new(false));
     let btn_is_down_clone = btn_is_down.clone();
 
+    let btn_stop_ongoing = Arc::new(Mutex::new(false));
+    let btn_stop_ongoing_clone = btn_stop_ongoing.clone();
+    let btn_stop_ongoing_clone2 = btn_stop_ongoing.clone();
+
     // let btn_ongoing = Arc::new(Mutex::new(false));
     // let btn_ongoing_clone = btn_ongoing.clone();
 
-    let debouncer = Debouncer::new(Duration::from_millis(500), DebounceMode::Trailing);
+
+    let debouncer = Debouncer::new(Duration::from_millis(MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY), DebounceMode::Trailing);
     let debouncer_clone = debouncer.clone();
 
     let handle = thread::spawn(move || {
-        let device_path = "/dev/input/event13";
-        let device_result = Device::open(device_path);
-        let mut device = device_result.unwrap();
         loop {
+            let device_paths = vec!["/dev/input/event1", "/dev/input/event13"];
+
+            let mut device_opt: Option<Device> = None;
+            for path_str in device_paths {
+                let path = Path::new(path_str);
+                if !Path::exists(path) {
+                    continue;
+                }
+                let device_result = Device::open(path_str);
+                if device_result.is_err() {
+                    continue;
+                }
+
+                let d = device_result.unwrap();
+                if d.name().is_some() && d.name().unwrap().contains("Apple") {
+                    device_opt = Some(d);
+                }
+
+            }
+
+
+            if device_opt.is_none() {
+                thread::sleep(Duration::from_millis(5000));
+                continue;
+            }
+
+            let mut device = device_opt.unwrap();
+
             for event in device.fetch_events().unwrap() {
                 match event.destructure() {
                     EventSummary::Key(ev, KeyCode::KEY_PLAYPAUSE, 1) => {
@@ -493,11 +522,38 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
+/*
+    let mut ongoing_handle_store: Option<JoinHandle<()>> = None;
+    let file_exists = Path::new("/tmp/test").exists();
+    loop {
+        select! {
+                _ = debouncer.ready() => {
+                    if !file_exists {
+                        let handle = tokio::spawn(async move {
+
+                        });
+                        ongoing_handle_store = Some(handle);
+                    } else {
+                        if let Some(handle) = ongoing_handle_store.take() {
+                            handle.abort();
+                        }
+                    }
+
+                }
+        }
+    }
+*/
 
     tokio::spawn(async move {
+        let mut ongoing_player_operation: Option<JoinHandle<()>> = None;
         loop {
+
             select! {
                 _ = debouncer.ready() => {
+
+
+
+
                     let mut clicks_guard = btn_click_count_clone.lock().unwrap();
                     let mut hold_guard = btn_is_down_clone.lock().unwrap();
 
@@ -519,12 +575,34 @@ async fn main() -> Result<(), slint::PlatformError> {
                                 _ => None
                             }
                         };
+
+
+                        // idea: If hold, periodically send events in an extra thread
+                        // until the next event comes in
                         if trigger_action_opt.is_some() {
-                            let _ = player_evt_tx_clone.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
+                            let loop_event = if *hold_guard {true} else {false};
+                            let tx = player_evt_tx_clone2.clone();
+
+                            if loop_event {
+                               let handle = tokio::spawn(async move {
+                                    loop {
+                                        let _ = tx.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
+                                        tokio::time::sleep(Duration::from_millis(MAGIC_REPETITIVE_ACTION_DELAY)).await;
+                                    }
+                                });
+                                ongoing_player_operation = Some(handle);
+                            } else {
+                                let _ = tx.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
+                            }
+
                         }
 
                         println!("debouncer exec  | btn_repeat_count: {}, btn_state: {:?}", *clicks_guard, *hold_guard);
                     } else {
+                        if let Some(handle) = ongoing_player_operation.take() {
+                            handle.abort();
+                        }
+
                         let _ = player_evt_tx_clone.send(PlayerEvent::ExternalTrigger(TriggerAction::StopOngoing));
                     }
 
