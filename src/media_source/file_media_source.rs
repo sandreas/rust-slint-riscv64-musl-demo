@@ -9,11 +9,13 @@ use lofty::picture::MimeType;
 use lofty::probe::Probe;
 use lofty::tag::TagType::Mp4Ilst;
 use lofty::tag::{Accessor, Tag};
-use std::fs;
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::{
+    fs,
+    io::Read,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    time::Duration
+};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
@@ -426,36 +428,6 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
         } else if movement_index.is_some() {
             meta.part = movement_index.map(|s| s.to_string());
         }
-    }
-
-
-    fn medias_source_image_codec_to_ext(&self, codec:MediaSourceImageCodec) -> String {
-            let unknown_ext = String::from("dat");
-        match codec {
-            MediaSourceImageCodec::Png => String::from("png"),
-            MediaSourceImageCodec::Jpeg => String::from("jpg"),
-            MediaSourceImageCodec::Tiff => String::from("tif"),
-            MediaSourceImageCodec::Bmp => String::from("jpg"),
-            MediaSourceImageCodec::Gif => String::from("gif"),
-                _ => unknown_ext.clone()
-            }
-
-    }
-
-    fn pic_full_path(&self, hash:u64, codec: MediaSourceImageCodec) -> String {
-        let hash_hex = format!("{:016x}", hash); // 16 chars, lowercase, zero-padded
-        let first_char = hash_hex.chars().next().unwrap();
-        let pic_ext = self.medias_source_image_codec_to_ext(codec);
-        let pic_filename = format!("{}.{}", &hash_hex.to_string(),pic_ext);
-        let pic_filename_small = format!("{}.tb.{}", &hash_hex.to_string(),pic_ext);
-
-        // let location = format!("{}{}/{}/{}", self.rel_cache_path(), "img", first_char, pic_filename);
-        let pic_path_str = format!("{}{}/{}/", self.cache_path(), "img", first_char);
-        let pic_path = Path::new(&pic_path_str);
-        let pic_full_path = pic_path.join(&pic_filename);
-        let tb_full_path = pic_path.join(&pic_filename_small);
-
-        pic_path_str
     }
 
     async fn extract_pictures(&self, tag: &Tag) -> Result<Vec<MediaSourcePicture>, LoftyError> {
