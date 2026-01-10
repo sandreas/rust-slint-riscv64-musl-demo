@@ -16,6 +16,7 @@ mod media_source;
 pub mod serde_json_mods;
 mod debouncer;
 mod audio;
+mod display;
 
 const MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY: u64 = 250;
 const MAGIC_REPETITIVE_ACTION_DELAY: u64 = 850;
@@ -52,6 +53,7 @@ use std::time::{Duration, SystemTime};
 use std::{iter, thread};
 use tokio::select;
 use tokio::task::JoinHandle;
+use display::utils;
 use crate::debouncer::tokio_debouncer::{DebounceMode, Debouncer};
 use crate::media_source::media_source_picture::MediaSourcePicture;
 use crate::player::player::Player;
@@ -164,12 +166,6 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let btn_is_down = Arc::new(Mutex::new(false));
     let btn_is_down_clone = btn_is_down.clone();
-
-    let btn_stop_ongoing = Arc::new(Mutex::new(false));
-
-    // let btn_ongoing = Arc::new(Mutex::new(false));
-    // let btn_ongoing_clone = btn_ongoing.clone();
-
 
     let debouncer = Debouncer::new(Duration::from_millis(MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY), DebounceMode::Trailing);
     let debouncer_clone = debouncer.clone();
@@ -616,30 +612,11 @@ fn format_duration(duration: Duration) -> String {
     format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
 }
 
-fn load_preferences(_: SlintPreferences) {
-    todo!()
-}
-
-fn brightness_percent_to_target_value(brightness_percent: f32) -> i32 {
-    (brightness_percent * 2500f32).round() as i32
-}
-
-fn update_brightness(brightness_target_value: i32) {
-    let path = Path::new("/sys/class/pwm/pwmchip8/pwm2/duty_cycle");
-    if path.exists() {
-        let mut file = OpenOptions::new()
-            .write(true) // <--------- this
-            .open(path)
-            .ok()
-            .unwrap();
-        let _ = write!(file, "{}", brightness_target_value);
-    }
-}
 
 fn sync_preferences(pref: SlintPreferences) {
     let new_brightness = pref.get_brightness();
-    let brightness_target_value = brightness_percent_to_target_value(new_brightness);
-    update_brightness(brightness_target_value);
+    let brightness_target_value = utils::brightness_percent_to_target_value(new_brightness);
+    utils::update_brightness(brightness_target_value);
 
     println!("brightness: {}", brightness_target_value);
 
