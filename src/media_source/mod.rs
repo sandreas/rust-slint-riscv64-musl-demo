@@ -8,3 +8,4 @@ pub mod media_source_chapter;
 pub mod media_source_image_codec;
 pub mod media_source_picture;
 pub mod media_source_command;
+pub(crate) mod utils;

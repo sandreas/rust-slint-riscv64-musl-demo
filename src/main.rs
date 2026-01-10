@@ -1,6 +1,5 @@
 use clap::Parser;
 use std::cmp::PartialEq;
-use std::fs::OpenOptions;
 use std::io::Write;
 use tokio::sync::mpsc;
 
@@ -17,6 +16,8 @@ pub mod serde_json_mods;
 mod debouncer;
 mod audio;
 mod display;
+mod time;
+mod slint_helpers;
 
 const MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY: u64 = 250;
 const MAGIC_REPETITIVE_ACTION_DELAY: u64 = 850;
@@ -29,15 +30,22 @@ struct Args {
     base_directory: String,
 }
 
+use crate::debouncer::tokio_debouncer::{DebounceMode, Debouncer};
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
 use crate::media_source::file_media_source::FileMediaSource;
 use crate::media_source::media_source::{
     MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem,
     MediaType,
 };
+use crate::media_source::media_source_picture::MediaSourcePicture;
 use crate::migrator::Migrator;
+use crate::player::player::Player;
+use crate::player::player_command::PlayerCommand;
+use crate::player::player_event::PlayerEvent;
+use crate::player::trigger_action::TriggerAction;
 use chrono::{DateTime, Utc};
 use cpal::traits::{DeviceTrait, HostTrait};
+use display::utils;
 use evdev::{Device, EventSummary, KeyCode};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
@@ -45,7 +53,6 @@ use slint::{
     ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString,
     VecModel,
 };
-use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -53,14 +60,7 @@ use std::time::{Duration, SystemTime};
 use std::{iter, thread};
 use tokio::select;
 use tokio::task::JoinHandle;
-use display::utils;
-use crate::debouncer::tokio_debouncer::{DebounceMode, Debouncer};
-use crate::media_source::media_source_picture::MediaSourcePicture;
-use crate::player::player::Player;
-use crate::player::player_command::PlayerCommand;
-use crate::player::player_event::PlayerEvent;
-use crate::player::trigger_action::TriggerAction;
-
+use crate::time::format_duration;
 
 slint::include_modules!();
 
@@ -431,7 +431,7 @@ async fn main() -> Result<(), slint::PlatformError> {
 
     let preferences_ui = slint_app_window.clone_strong();
     slint_preferences.on_sync(move || {
-        sync_preferences(preferences_ui.global::<SlintPreferences>());
+        slint_helpers::utils::sync_preferences(preferences_ui.global::<SlintPreferences>());
     });
 
     let navigation = slint_app_window.global::<SlintNavigation>();
@@ -526,11 +526,11 @@ async fn main() -> Result<(), slint::PlatformError> {
 
                 match event {
                     MediaSourceEvent::FilterResults(items) => {
-                        inner.set_filter_results(rust_items_to_slint_model(items, false));
+                        inner.set_filter_results(slint_helpers::utils::rust_items_to_slint_model(items, false));
                     }
                     MediaSourceEvent::FindResult(opt_item) => {
                         if let Some(item) = opt_item {
-                            inner.set_find_results(rust_items_to_slint_model(vec![item], true));
+                            inner.set_find_results(slint_helpers::utils::rust_items_to_slint_model(vec![item], true));
                         } else {
                             // clear results if nothing found
                             inner.set_find_results(slint::ModelRc::default());
@@ -603,159 +603,10 @@ async fn main() -> Result<(), slint::PlatformError> {
     slint_app_window.run()
 }
 
-fn format_duration(duration: Duration) -> String {
-    let millis = duration.as_millis();
-    let secs = millis / 1000;
-    let h = secs / (60 * 60);
-    let m = (secs / 60) % 60;
-    let s = secs % 60;
-    format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
-}
 
 
-fn sync_preferences(pref: SlintPreferences) {
-    let new_brightness = pref.get_brightness();
-    let brightness_target_value = utils::brightness_percent_to_target_value(new_brightness);
-    utils::update_brightness(brightness_target_value);
 
-    println!("brightness: {}", brightness_target_value);
 
-    // dark / light
-    println!("color-scheme: {}", pref.get_color_scheme());
-}
 
-fn option_to_slint_string(option: &Option<String>) -> SharedString {
-    if option.is_some() {
-        option.as_ref().unwrap().to_shared_string()
-    } else {
-        SharedString::from("")
-    }
-}
 
-fn option_to_slint_cover(option: &Option<MediaSourcePicture>) -> (SharedString, SharedString) {
-    if option.is_some() {
-        let media_source_picture = option.as_ref().unwrap();
-        (
-            media_source_picture
-                .pic_full_path(String::from("jpg"))
-                .to_shared_string(),
-            media_source_picture
-                .tb_full_path(String::from("jpg"))
-                .to_shared_string(),
-        )
-    } else {
-        (SharedString::from(""), SharedString::from(""))
-    }
-}
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LoadCoverResult {
-    Image,
-    Placeholder,
-    None,
-}
 
-fn load_cover_with_fallback(
-    cover_path: &str,
-    media_type: &MediaType,
-) -> (slint::Image, LoadCoverResult) {
-    let cover_result = slint::Image::load_from_path(Path::new(cover_path));
-
-    if let Ok(cover) = cover_result {
-        return (cover, LoadCoverResult::Image);
-    }
-
-    // todo: implement fallback image
-    let fallback_image_result = match media_type {
-        MediaType::Audiobook => slint::Image::load_from_svg_data(include_bytes!(
-            "../ui/images/icons/home/audiobooks.png"
-        )),
-        _ => slint::Image::load_from_svg_data(include_bytes!("../ui/images/icons/home/music.png")),
-    };
-    if let Ok(fallback_image) = fallback_image_result {
-        return (fallback_image, LoadCoverResult::Placeholder);
-    }
-    empty_cover_result()
-}
-
-fn empty_cover_result() -> (slint::Image, LoadCoverResult) {
-    (
-        slint::Image::from_rgb8(SharedPixelBuffer::<Rgb8Pixel>::new(1, 1)),
-        LoadCoverResult::None,
-    )
-}
-
-fn rust_items_to_slint_model(
-    rust_items: Vec<MediaSourceItem>,
-    details: bool,
-) -> ModelRc<SlintMediaSourceItem> {
-    // Create VecModel directly
-    let model = VecModel::<SlintMediaSourceItem>::from(
-        rust_items
-            .into_iter()
-            .map(|rust_item| {
-                let (cover_path, thumbnail_path) = option_to_slint_cover(&rust_item.metadata.cover);
-
-                let (thumbnail, thumbnail_type) =
-                    load_cover_with_fallback(&thumbnail_path, &rust_item.media_type);
-
-                let (cover, cover_type) = if details {
-                    load_cover_with_fallback(&cover_path, &rust_item.media_type)
-                } else {
-                    empty_cover_result()
-                };
-
-                let mut slint_chapters_vec = VecModel::default();
-                for chapter in &rust_item.metadata.chapters {
-                    let start: i64 = chapter
-                        .start
-                        .as_millis()
-                        .try_into()
-                        .expect("Duration too long for u64");
-                    let duration: i64 = chapter
-                        .duration
-                        .as_millis()
-                        .try_into()
-                        .expect("Duration too long for u64");
-
-                    let slint_chapter = SlintMediaSourceChapter {
-                        name: chapter.name.to_shared_string(),
-                        start,
-                        duration,
-                    };
-
-                    slint_chapters_vec.push(slint_chapter);
-                }
-
-                let chapters_model = ModelRc::new(slint_chapters_vec);
-
-                SlintMediaSourceItem {
-                    id: rust_item.id.clone().into(),
-                    media_type: convert_media_type_to_int(&rust_item.media_type),
-                    name: rust_item.title.clone().into(),
-                    genre: option_to_slint_string(&rust_item.metadata.genre),
-                    artist: option_to_slint_string(&rust_item.metadata.artist),
-                    album: option_to_slint_string(&rust_item.metadata.album),
-                    composer: option_to_slint_string(&rust_item.metadata.composer),
-                    series: option_to_slint_string(&rust_item.metadata.series),
-                    part: option_to_slint_string(&rust_item.metadata.part),
-                    has_cover: cover_type != LoadCoverResult::None,
-                    cover,
-                    has_thumbnail: thumbnail_type != LoadCoverResult::None,
-                    thumbnail,
-                    chapters: chapters_model,
-                }
-            })
-            .collect::<Vec<_>>(),
-    );
-
-    // Explicitly wrap in ModelRc if needed (usually not)
-    ModelRc::from(Rc::new(model))
-}
-
-fn convert_media_type_to_int(media_type: &MediaType) -> i32 {
-    match media_type {
-        MediaType::Unspecified => 0,
-        MediaType::Audiobook => 2,
-        MediaType::Music => 4,
-    }
-}
