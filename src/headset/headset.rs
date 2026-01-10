@@ -1,10 +1,6 @@
+
 use crate::player::player::PlayerEvent;
 use evdev::{Device, EventSummary, KeyCode};
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::JoinHandle;
-use std::time::Duration;
 use tokio::select;
 use tokio::sync::mpsc;
 

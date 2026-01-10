@@ -15,6 +15,7 @@ mod button_handler;
 mod media_source;
 pub mod serde_json_mods;
 mod debouncer;
+mod audio;
 
 const MAGIC_HEADSET_REMOTE_DEBOUNCER_DELAY: u64 = 250;
 const MAGIC_REPETITIVE_ACTION_DELAY: u64 = 850;
@@ -61,53 +62,6 @@ use crate::player::trigger_action::TriggerAction;
 
 slint::include_modules!();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-enum HeadsetButton {
-    PlayPause,
-    VolumeUp,
-    VolumeDown,
-}
-enum HeadsetEvent {
-    Press(HeadsetButton),
-    Release(HeadsetButton),
-}
-
 async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection, DbErr> {
     let db = Database::connect(db_url).await?;
     // todo: dirty hack to prevent startup failure if db exists
@@ -127,43 +81,6 @@ async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection,
 
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
-    /*
-        for i in 1..5 {
-            let hosts_ids = cpal::available_hosts();
-
-            for host_id in hosts_ids {
-                println!("==== HOST {:?}", host_id);
-
-                let host_result = cpal::host_from_id(host_id);
-
-                if let Ok(host) = host_result {
-                    let devices_result = host.devices();
-                    if let Ok(devices) = devices_result {
-
-                        for device in devices {
-                            let devicename_result = device.name();
-                            if let Ok(devicename) = devicename_result {
-                                println!("   ----{:?}", devicename);
-                            }
-                        }
-                    }
-                }
-            }
-            tokio::time::sleep(Duration::from_secs(5)).await;
-        }
-
-        return Ok(());
-    */
-
-
-
-
-
-
-
-
-
-
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
@@ -249,8 +166,6 @@ async fn main() -> Result<(), slint::PlatformError> {
     let btn_is_down_clone = btn_is_down.clone();
 
     let btn_stop_ongoing = Arc::new(Mutex::new(false));
-    let btn_stop_ongoing_clone = btn_stop_ongoing.clone();
-    let btn_stop_ongoing_clone2 = btn_stop_ongoing.clone();
 
     // let btn_ongoing = Arc::new(Mutex::new(false));
     // let btn_ongoing_clone = btn_ongoing.clone();
