@@ -1,6 +1,4 @@
 use clap::Parser;
-use std::cmp::PartialEq;
-use std::io::Write;
 use tokio::sync::mpsc;
 
 mod gpio_button_service;
@@ -34,33 +32,29 @@ use crate::debouncer::tokio_debouncer::{DebounceMode, Debouncer};
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
 use crate::media_source::file_media_source::FileMediaSource;
 use crate::media_source::media_source::{
-    MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem,
-    MediaType,
+    MediaSource, MediaSourceCommand, MediaSourceEvent
+    ,
 };
-use crate::media_source::media_source_picture::MediaSourcePicture;
 use crate::migrator::Migrator;
 use crate::player::player::Player;
 use crate::player::player_command::PlayerCommand;
 use crate::player::player_event::PlayerEvent;
 use crate::player::trigger_action::TriggerAction;
+use crate::time::format_duration;
 use chrono::{DateTime, Utc};
-use cpal::traits::{DeviceTrait, HostTrait};
-use display::utils;
 use evdev::{Device, EventSummary, KeyCode};
 use sea_orm::{Database, DatabaseConnection, DbErr};
 use sea_orm_migration::MigratorTrait;
 use slint::{
-    ComponentHandle, Model, ModelRc, Rgb8Pixel, SharedPixelBuffer, SharedString, ToSharedString,
+    ComponentHandle, Model, ModelRc, SharedString, ToSharedString,
     VecModel,
 };
 use std::path::Path;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use std::{iter, thread};
 use tokio::select;
 use tokio::task::JoinHandle;
-use crate::time::format_duration;
 
 slint::include_modules!();
 
@@ -554,7 +548,7 @@ async fn main() -> Result<(), slint::PlatformError> {
 
         while let Some(event) = player_evt_rx.recv().await {
             if let Some(ui) = ui_handle_player.upgrade() {
-                let mut inner = ui.global::<SlintAudioPlayer>();
+                let inner = ui.global::<SlintAudioPlayer>();
 
                 match event {
                     PlayerEvent::Status(item_id, status) => {
@@ -587,10 +581,8 @@ async fn main() -> Result<(), slint::PlatformError> {
                             } else {
                                 inner.invoke_pause();
                             }
-                            _ => {}
                         }
                     }
-                    _ => {}
                 }
             } else {
                 // UI was dropped; stop listening
