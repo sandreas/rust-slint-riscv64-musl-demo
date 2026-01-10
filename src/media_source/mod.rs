@@ -1,2 +1,10 @@
-pub mod media_source_trait;
+pub mod media_source;
 pub mod file_media_source;
+pub mod media_type;
+pub mod media_source_item;
+pub mod media_source_event;
+pub mod media_source_metadata;
+pub mod media_source_chapter;
+pub mod media_source_image_codec;
+pub mod media_source_picture;
+pub mod media_source_command;

@@ -1,35 +1,40 @@
 use crate::item;
 use async_trait::async_trait;
 use chrono::{DateTime, Local, Utc};
+use image::imageops::FilterType;
+use image::{load_from_memory, DynamicImage, GenericImageView};
 use lofty::error::LoftyError;
 use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::picture::MimeType;
 use lofty::probe::Probe;
-use lofty::tag::{Accessor, Tag};
 use lofty::tag::TagType::Mp4Ilst;
-use std::ffi::OsStr;
-use std::{fs, io};
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Error, Read, Write};
+use lofty::tag::{Accessor, Tag};
+use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use image::{load_from_memory, DynamicImage, GenericImageView};
-use image::imageops::FilterType;
-use lofty::picture::MimeType;
-use lofty::picture::PictureType::Media;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use walkdir::WalkDir;
 
 use crate::entity::item::{ActiveModel, ActiveModelEx};
-use crate::entity::{items_json_metadata, items_metadata};
-use crate::entity::items_metadata::{Entity, TagField};
-use mp4ameta::{DataIdent, FreeformIdent, ImgRef};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
-use sea_orm::prelude::HasMany;
-use xxhash_rust::xxh3::xxh3_64;
 use crate::entity::items_json_metadata::JsonTagField::Chapters;
-use crate::entity::items_metadata::TagField::{*};
-use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceCommand, MediaSourceEvent, MediaSourceImageCodec, MediaSourceItem, MediaSourceMetadata, MediaSourcePicture, MediaType};
+use crate::entity::items_metadata::TagField::*;
+use crate::entity::items_metadata::{Entity, TagField};
+use crate::entity::{items_json_metadata, items_metadata};
+use mp4ameta::FreeformIdent;
+use sea_orm::prelude::HasMany;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, HasManyModel, QueryFilter};
+use xxhash_rust::xxh3::xxh3_64;
+use crate::media_source::media_source::MediaSource;
+use crate::media_source::media_source_chapter::MediaSourceChapter;
+use crate::media_source::media_source_command::MediaSourceCommand;
+use crate::media_source::media_source_event::MediaSourceEvent;
+use crate::media_source::media_source_image_codec::MediaSourceImageCodec;
+use crate::media_source::media_source_item::MediaSourceItem;
+use crate::media_source::media_source_metadata::MediaSourceMetadata;
+use crate::media_source::media_source_picture::MediaSourcePicture;
+use crate::media_source::media_type::MediaType;
 
 #[derive(Clone)]
 pub struct FileMediaSource {
@@ -147,6 +152,9 @@ impl FileMediaSource {
 
 
 
+        // let file_id_item = self.find_file_id()
+
+
         // if id == 0 insert, otherwise update
         let builder = if id == 0 {
             ActiveModel::builder()
@@ -190,18 +198,6 @@ impl FileMediaSource {
         self.add_metadata(&mut result.metadata, Series, meta.series.clone(), now);
         self.add_metadata(&mut result.metadata, Part, meta.part.clone(), now);
 
-
-        // let v: Vec<MediaSourceChapter> = serde_json::from_str(data)?;
-        /*
-        // Some data structure.
-        let address = Address {
-            street: "10 Downing Street".to_owned(),
-            city: "London".to_owned(),
-        };
-
-        // Serialize it to a JSON string.
-        let j = serde_json::to_string(&address)?;
-        */
         if !meta.chapters.is_empty() {
             let chapters_json_result = serde_json::to_string(&meta.chapters);
             if let Ok(chapters_json) = chapters_json_result {
@@ -267,7 +263,6 @@ impl FileMediaSource {
                 }
 
             });
-        let cache_path = self.cache_path();
 
         for audio_file in audio_files {
             let full_path = audio_file.path().to_str().unwrap().to_string();
@@ -288,16 +283,7 @@ impl FileMediaSource {
 
             let file_id = file_id::get_file_id(full_path.clone()).unwrap();
             let file_id_str = format!("{:?}", file_id);
-
-            let file_name_without_ext = audio_file
-                .path()                // PathBuf
-                .file_stem()           // Option<&OsStr>
-                .and_then(OsStr::to_str)
-                .map(|s| s.to_owned()).unwrap(); // Option<String>
-
             let file_date_modified = audio_file.path().metadata().unwrap().modified().unwrap();
-
-
             let file_date_mod_compare: DateTime<Local> = DateTime::from(file_date_modified);
 
             let item_result = item::Entity::find()
@@ -305,8 +291,13 @@ impl FileMediaSource {
                 .one(&db)
                 .await;
 
-            let (item_is_modified, id) = if let Ok(item) = item_result && let Some(ix) = item {
-                (ix.date_modified < file_date_mod_compare, ix.id)
+            if item_result.is_err() {
+                continue;
+            }
+            let item_option = item_result.unwrap();
+
+            let (item_is_modified, id) = if let Some(item) = item_option {
+                (item.date_modified < file_date_mod_compare, item.id)
             } else {
                 (true, 0)
             };
@@ -324,20 +315,18 @@ impl FileMediaSource {
                     self.empty_metadata()
                 };
 
-                let result_model = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), &item_meta).await;
+                let _ = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), &item_meta).await;
             } else {
                 println!("item NOT modified");
             }
+
+
+
+
+
         }
     }
 
-    fn map_media_source_to_orm_media_type(&self, media_type: MediaType) -> item::MediaType {
-        match media_type {
-            MediaType::Audiobook => item::MediaType::Audiobook,
-            MediaType::Music => item::MediaType::Music,
-            _ => item::MediaType::Unspecified,
-        }
-    }
 
 
 
@@ -397,13 +386,6 @@ let mut tag = Tag::read_with_path("music.m4a", &read_cfg).unwrap();
     fn extract_mp4_metadata(&self, meta: &mut MediaSourceMetadata, path: String, duration: Duration) {
         let mut chapters: Vec<MediaSourceChapter> = Vec::new();
         let mp4tag = mp4ameta::Tag::read_from_path(path.clone()).unwrap();
-        let mp4images: Vec<(&DataIdent, ImgRef<'_>)> = mp4tag.images().collect();
-        let tag_cover = if mp4images.len() > 0 {
-            Some(mp4images.first().unwrap().1.data)
-        } else {
-            None
-        };
-
         let tmp_chaps = mp4tag.chapters().iter().rev();
         let mut end = duration;
         for tmp_chap in tmp_chaps {

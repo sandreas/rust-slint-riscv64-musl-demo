@@ -28,8 +28,8 @@ struct Args {
 
 use crate::entity::{item, items_json_metadata, items_metadata, items_progress_history};
 use crate::media_source::file_media_source::FileMediaSource;
-use crate::media_source::media_source_trait::{
-    MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem, MediaSourcePicture,
+use crate::media_source::media_source::{
+    MediaSource, MediaSourceCommand, MediaSourceEvent, MediaSourceItem,
     MediaType,
 };
 use crate::migrator::Migrator;
@@ -78,6 +78,7 @@ pub use parking_lot::{Mutex, MutexGuard};
 #[cfg(not(feature = "parking_lot"))]
 pub use std::sync::MutexGuard;
 use tokio::task::JoinHandle;
+use crate::media_source::media_source_picture::MediaSourcePicture;
 
 #[cfg(not(feature = "parking_lot"))]
 pub trait MutexExt<T> {

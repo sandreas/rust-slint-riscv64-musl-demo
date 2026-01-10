@@ -2,7 +2,7 @@
 // https://github.com/tsirysndr/music-player/blob/master/playback/src/audio_backend/rodio.rs
 // load multiple sources with rodio: https://stackoverflow.com/questions/75505017/how-can-i-make-rust-with-the-rodio-crate-load-multiple-sources-in-a-vec-so-i
 
-use crate::media_source::media_source_trait::{MediaSource, MediaSourceChapter, MediaSourceItem};
+use crate::media_source::media_source::{MediaSource, MediaSourceItem};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
 use rodio::source::SeekError;
@@ -17,6 +17,7 @@ use mpsc::UnboundedReceiver;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
+use crate::media_source::media_source_chapter::MediaSourceChapter;
 
 #[derive(Debug)]
 pub enum PlayerCommand {
