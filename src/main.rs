@@ -33,7 +33,6 @@ use crate::media_source::media_source::{
     MediaType,
 };
 use crate::migrator::Migrator;
-use crate::player::player::{Player, PlayerCommand, PlayerEvent, TriggerAction};
 use chrono::{DateTime, Utc};
 use cpal::traits::{DeviceTrait, HostTrait};
 use evdev::{Device, EventSummary, KeyCode};
@@ -79,6 +78,10 @@ pub use parking_lot::{Mutex, MutexGuard};
 pub use std::sync::MutexGuard;
 use tokio::task::JoinHandle;
 use crate::media_source::media_source_picture::MediaSourcePicture;
+use crate::player::player::Player;
+use crate::player::player_command::PlayerCommand;
+use crate::player::player_event::PlayerEvent;
+use crate::player::trigger_action::TriggerAction;
 
 #[cfg(not(feature = "parking_lot"))]
 pub trait MutexExt<T> {

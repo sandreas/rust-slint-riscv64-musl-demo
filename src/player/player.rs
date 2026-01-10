@@ -18,39 +18,8 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::sleep;
 use crate::media_source::media_source_chapter::MediaSourceChapter;
-
-#[derive(Debug)]
-pub enum PlayerCommand {
-    Update(String),
-    PlayTest(),
-    PlayMedia(String),
-    Pause(),
-    Stop(),
-    Play(),
-    Next(),
-    Previous(),
-    SeekRelative(i64),
-    SeekTo(Duration),
-}
-
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TriggerAction {
-    Toggle,
-    Next,
-    Previous,
-    StepBack,
-    StepForward,
-    StopOngoing,
-}
-
-#[derive(Debug)]
-pub enum PlayerEvent {
-    Status(String, String),
-    Position(String, Duration),
-    Stopped,
-    ExternalTrigger(TriggerAction)
-}
+pub(crate) use crate::player::player_command::PlayerCommand;
+pub(crate) use crate::player::player_event::PlayerEvent;
 
 pub struct Player {
     media_source: Arc<dyn MediaSource>,
