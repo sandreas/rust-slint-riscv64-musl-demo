@@ -319,13 +319,8 @@ impl FileMediaSource {
 
                 let _ = self.upsert_item(id, file_id_str.clone(), media_type.clone(), rel_path.clone(), &item_meta).await;
             } else {
-                println!("item NOT modified");
+                // item has not been modified
             }
-
-
-
-
-
         }
     }
 
@@ -587,57 +582,6 @@ fn resize_image_bytes_to_file(
     Ok(())
 }
 
-/*
-fn process_image_bytes(
-    input_bytes: &[u8],
-    max_width: u32,
-    max_height: u32
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let resized = resize_image_bytes(input_bytes, max_width, max_height)?;
-
-    // Save to bytes (PNG format)
-    let mut output_bytes = Vec::new();
-    resized.write_to(&mut output_bytes, image::ImageOutputFormat::Png)?;
-
-    Ok(output_bytes)
-}
-*/
-
-fn resize_image_bytes(
-    image_bytes: &[u8],
-    max_width: u32,
-    max_height: u32
-) -> Result<DynamicImage, image::ImageError> {
-    let img = load_from_memory(image_bytes)?;
-
-    let (width, height) = img.dimensions();
-    if width <= max_width && height <= max_height {
-        return Ok(img);
-    }
-
-    let aspect = width as f32 / height as f32;
-    let target_width = (max_height as f32 * aspect).min(max_width as f32) as u32;
-    let target_height = (max_width as f32 / aspect).min(max_height as f32) as u32;
-
-    Ok(img.resize(target_width, target_height, FilterType::Lanczos3))
-}
-
-fn resize_keep_aspect(image: &DynamicImage, max_width: u32, max_height: u32) -> DynamicImage {
-    let (width, height) = image.dimensions();
-    let aspect = width as f32 / height as f32;
-
-    let new_width = (max_height as f32 * aspect) as u32;
-    let new_height = (max_width as f32 / aspect) as u32;
-
-    // Choose dimensions that fit within bounds
-    let (target_width, target_height) = if new_width <= max_width {
-        (new_width, max_height)
-    } else {
-        (max_width, new_height)
-    };
-
-    image.resize_exact(target_width, target_height, FilterType::Lanczos3)
-}
 
 fn mime_to_codec( mime_type_opt: Option<&MimeType>) -> MediaSourceImageCodec {
     let unknown_ext = String::from("dat");
