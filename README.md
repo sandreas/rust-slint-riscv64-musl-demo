@@ -126,13 +126,18 @@ That's it for now, more to come.
   - [ ] Position MAX17043 JST 2.0 facing upwards for connecting the 1600mah battery
 - [ ] Compose the hardware components
   - [x] Make a breadboard draft
-  - [ ] Test the button GPIO connections
+  - [x] Test the button GPIO connections
+  - [x] Test Headphone-remote controls
   - [ ] Test MAX17043 I2C connection and readout
-  - [ ] Test Headphone-remote controls
 - [ ] Implement the DAP software for the embedded device
   - Next Steps
-    - [x] Store media items to database
-    - [x] Improve display of media items
+    - [ ] Refactor code to work reliably on LicheeRV Nano (improve multithreading, fix crashes, more logging)
+      - Idea: Implement central `MessageBus` to coordinate events / channels between services
+      - Research slint::spawn_local vs tokio main (https://docs.rs/slint/latest/slint/fn.spawn_local.html) - the use of `#[tokio::main]` is not recommended
+      - Async Rust + Slint: https://github.com/slint-ui/slint/discussions/4377
+    - [ ] Store progress for audio books to database
+    - [ ] Make volume adjustable via Headset, GPIO buttons and UI (optional)
+    - [ ] Implement GPIO button controller to turn of display on the go (play and volume should also work)
     - [ ] Load preferences on app start
     - [ ] Sync preferences to DB when changed
     - [ ] Extend schema to store media-progress for items > 15 minutes
