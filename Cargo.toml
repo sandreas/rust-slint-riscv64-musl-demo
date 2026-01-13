@@ -7,17 +7,15 @@ repository = "https://github.com/pilabor/resonance"
 
 # software renderer is mandatory for riscv64 compilation but also works on ArchLinux
 [dependencies.slint]
-version = "1.14.1" # or your desired version
+version = "1.15.0" # "1.14.1" # version = "1.15.0" # use for local git (configured in .cargo/config.toml)
 features = ["backend-linuxkms-noseat", "renderer-software", "compat-1-2"]
-# git = "https://github.com/slint-ui/slint.git"
-# branch = "master"
-# version = "1.15.0"
+
 
 #default-features = false
 
 [build-dependencies]
 # lucide-slint = "0.562.0"
-slint-build = "1.14.1"
+slint-build = "1.15.0" # "1.14.1" # slint-build = "1.15.0" # use for local git (configured in .cargo/config.toml)
 
 [profile.dev]
 opt-level = 0

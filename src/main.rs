@@ -419,6 +419,11 @@ async fn main() -> Result<(), slint::PlatformError> {
     });
 
     let slint_preferences = slint_app_window.global::<SlintPreferences>();
+
+    let now: DateTime<Utc> = SystemTime::now().into();
+
+
+    slint_preferences.set_now(now.format("%H:%M:%S%.3fZ").to_shared_string());
     // load_preferences(&slint_preferences);
 
     // slint_preferences.set_brightness(100f32);

@@ -1,4 +1,4 @@
-import { SlintIcons } from "globals.slint";
+import { SlintIcons, SlintPreferences } from "globals.slint";
 
 import {
     HorizontalBox,
@@ -8,7 +8,8 @@ import {
 import { HomeButton } from "home/home_button.slint";
 
 export component Home {
-    VerticalBox {
+    in-out property <bool> display-color-test: SlintPreferences.display-color-test;
+    if !display-color-test: VerticalBox {
         alignment: start;
         HorizontalBox {
             alignment: center;
@@ -40,4 +41,62 @@ export component Home {
             }
         }
     }
+        // embedded home screen cover for display color testing
+    if display-color-test: VerticalBox {
+        Text {
+            text: SlintPreferences.now;
+        }
+        Text {
+            text: "png";
+        }
+        Image {
+            width: 358px;
+            height:100px;
+            source: @image-url("images/testing/display-color-test.png");
+        }
+        Text {
+            text: "jpg";
+        }
+        Image {
+            width: 358px;
+            height:100px;
+            source: @image-url("images/testing/display-color-test.jpg");
+        }
+        HorizontalBox {
+            Rectangle {
+                width:100px;
+                background: red;
+                Text {
+                                color: white;
+
+                    text: "red";
+                }
+            }
+            Rectangle {
+                width:100px;
+                background: green;
+                Text {
+                                color: white;
+
+                    text: "green";
+                }
+            }
+            Rectangle {
+                width:100px;
+                background: blue;
+
+                Text {
+                color: white;
+                    text: "blue";
+                }
+            }
+        }
+        HomeButton {
+            image: SlintIcons.settings;
+            route: ["settings"];
+            text: "Settings";
+        }
+    }
+
+
 }

@@ -53,11 +53,14 @@ export global SlintPreferences {
 
     callback sync();
 
+    in-out property <string> now: "";
+
     in-out property <ColorScheme> color-scheme: ColorScheme.dark;
     // in-out property <bool> fullscreen: false;
     in-out property <float> brightness: 0.3;
 
     in-out property <bool> enable-gestures: true;
+    in-out property <bool> display-color-test: true;
 }
 
 export struct SlintMediaSourceChapter {
