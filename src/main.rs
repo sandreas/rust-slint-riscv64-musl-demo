@@ -77,6 +77,7 @@ async fn connect_db(db_url: &str, first_run: bool) -> Result<DatabaseConnection,
 
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
+// fn main() -> Result<(), slint::PlatformError> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
@@ -113,28 +114,7 @@ async fn main() -> Result<(), slint::PlatformError> {
     );
     let first_run = !Path::new(&db_path).exists();
     let db_url = format!("sqlite://{}?mode=rwc", db_path);
-    let connect_result = connect_db(&db_url, first_run).await;
-    if connect_result.is_err() {
-        return Err(slint::PlatformError::Other(format!(
-            "Could not find, create or migrate database: {}",
-            connect_result.err().unwrap()
-        )));
-    }
 
-    let db = connect_result.unwrap();
-
-
-    // let settings_manager = SettingsManager::new(db.clone());
-
-    let display_brightness = 1000; // settings_manager.get("display.brightness", 1000).await;
-    let dark_mode = true; // settings_manager.get("appearance.dark_mode", true);
-
-    let file_source = FileMediaSource::new(db.clone(), args.base_directory);
-    let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
-    let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
-    file_source.scan_media().await;
-
-    tokio::spawn(file_source.clone().run(source_cmd_rx, source_evt_tx));
 
     let (player_cmd_tx, player_cmd_rx) = mpsc::unbounded_channel::<PlayerCommand>();
     let (player_evt_tx, mut player_evt_rx) = mpsc::unbounded_channel::<PlayerEvent>();
@@ -142,16 +122,53 @@ async fn main() -> Result<(), slint::PlatformError> {
     let player_evt_tx_clone = player_evt_tx.clone();
     let player_evt_tx_clone2 = player_evt_tx.clone();
 
+    let (source_cmd_tx, source_cmd_rx) = mpsc::unbounded_channel::<MediaSourceCommand>();
+    let (source_evt_tx, source_evt_rx) = mpsc::unbounded_channel::<MediaSourceEvent>();
 
-    let mut player = Player::new(
-        Arc::new(file_source.clone()),
-        "USB-C to 3.5mm Headphone Jack A".to_string(),
-        "pipewire".to_string(),
-    );
 
-    tokio::spawn(async move {
-        player.run(player_cmd_rx, player_evt_tx.clone()).await;
-    });
+
+    slint::spawn_local(async move {
+        let connect_result = connect_db(&db_url, first_run).await;
+        if connect_result.is_err() {
+            /*
+            return Err(slint::PlatformError::Other(format!(
+                "Could not find, create or migrate database: {}",
+                connect_result.err().unwrap()
+            )));
+             */
+            return;
+        }
+
+        let db = connect_result.unwrap();
+
+
+        // let settings_manager = SettingsManager::new(db.clone());
+
+        let display_brightness = 1000; // settings_manager.get("display.brightness", 1000).await;
+        let dark_mode = true; // settings_manager.get("appearance.dark_mode", true);
+        let file_source = FileMediaSource::new(db.clone(), args.base_directory);
+
+        let fs_clone1 = file_source.clone();
+        slint::spawn_local(async move {
+            fs_clone1.scan_media().await;
+            fs_clone1.run(source_cmd_rx, source_evt_tx).await;
+        }).unwrap();
+
+
+
+        let fs_clone2 = file_source.clone();
+        let mut player = Player::new(
+            Arc::new(fs_clone2),
+            "USB-C to 3.5mm Headphone Jack A".to_string(),
+            "pipewire".to_string(),
+        );
+        slint::spawn_local(async move {
+            player.run(player_cmd_rx, player_evt_tx.clone()).await;
+        }).unwrap();
+    }).unwrap();
+
+
+
 
 
 
@@ -269,16 +286,13 @@ async fn main() -> Result<(), slint::PlatformError> {
     }
 */
 
-    tokio::spawn(async move {
-        let mut ongoing_player_operation: Option<JoinHandle<()>> = None;
+    slint::spawn_local(async move {
+
+        let mut ongoing_player_operation: Option<i_slint_core::future::JoinHandle<_>> = None;
         loop {
 
             select! {
                 _ = debouncer.ready() => {
-
-
-
-
                     let mut clicks_guard = btn_click_count_clone.lock().unwrap();
                     let mut hold_guard = btn_is_down_clone.lock().unwrap();
 
@@ -309,12 +323,15 @@ async fn main() -> Result<(), slint::PlatformError> {
                             let tx = player_evt_tx_clone2.clone();
 
                             if loop_event {
-                               let handle = tokio::spawn(async move {
+
+                                let handle = slint::spawn_local(async move {
                                     loop {
                                         let _ = tx.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
                                         tokio::time::sleep(Duration::from_millis(MAGIC_REPETITIVE_ACTION_DELAY)).await;
+                                        // thread::sleep(Duration::from_millis(MAGIC_REPETITIVE_ACTION_DELAY));
                                     }
-                                });
+                                }).unwrap();
+
                                 ongoing_player_operation = Some(handle);
                             } else {
                                 let _ = tx.send(PlayerEvent::ExternalTrigger(trigger_action_opt.unwrap()));
@@ -341,7 +358,7 @@ async fn main() -> Result<(), slint::PlatformError> {
                 }
         }
         }
-    });
+    }).unwrap();
 
 
     let slint_app_window = MainWindow::new()?;
@@ -596,6 +613,7 @@ async fn main() -> Result<(), slint::PlatformError> {
         }
     })
     .unwrap();
+    // tokio::task::block_in_place(slint::run_event_loop).unwrap();
 
     slint_app_window.run()
 }

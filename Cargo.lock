@@ -4899,6 +4899,7 @@ dependencies = [
  "cpal",
  "evdev",
  "file-id",
+ "i-slint-core",
  "image",
  "lofty",
  "mp4ameta",

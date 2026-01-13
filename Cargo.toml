@@ -49,4 +49,4 @@ file-id = "0.2.3"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 image = "0.25.9"
 parking_lot = "0.12.5"
-
+i-slint-core = "1.15.0"

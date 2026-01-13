@@ -1,5 +1,6 @@
 [patch.crates-io]
 slint = { git = "file:///home/andreas/projects/sandreas/slint" } # use for local git (see cargo.toml)
 slint-build = { git = "file:///home/andreas/projects/sandreas/slint" } # use for local git (see cargo.toml)
+i-slint-core = { git = "file:///home/andreas/projects/sandreas/slint" } # use for local git (see cargo.toml)
 # slint = { git = "https://github.com/slint-ui/slint" }
 # slint-build = { git = "https://github.com/slint-ui/slint" }
