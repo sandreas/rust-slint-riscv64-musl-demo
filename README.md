@@ -131,10 +131,12 @@ That's it for now, more to come.
   - [ ] Test MAX17043 I2C connection and readout
 - [ ] Implement the DAP software for the embedded device
   - Next Steps
+    - [ ] Verify getting rid of tokio debouncer in favor of https://docs.rs/debounce/latest/debounce/ to ditch tokio::spawn completely
     - [ ] Refactor code to work reliably on LicheeRV Nano (improve multithreading, fix crashes, more logging)
       - Idea: Implement central `MessageBus` to coordinate events / channels between services
       - Research slint::spawn_local vs tokio main (https://docs.rs/slint/latest/slint/fn.spawn_local.html) - the use of `#[tokio::main]` is not recommended
       - Async Rust + Slint: https://github.com/slint-ui/slint/discussions/4377
+      - 
     - [ ] Store progress for audio books to database
     - [ ] Make volume adjustable via Headset, GPIO buttons and UI (optional)
     - [ ] Implement GPIO button controller to turn of display on the go (play and volume should also work)
