@@ -35,7 +35,11 @@ pub const DISPLAY_INSET = (DISPLAY_GLASS_HEIGHT - DISPLAY_HOLE_HEIGHT) / 2;
 
 pub const LICHEE_PCB_WIDTH=22.90mm;
 pub const LICHEE_PCB_HEIGHT=35.60mm;
-pub const LICHEE_PCB_DEPTH=1.00mm;
+pub const PCB_THICKNESS=1.00mm;
+
+pub const TP4057_PCB_WIDTH=12mm;
+pub const TP4057_PCB_HEIGHT=16mm;
+
 
 pub const MICRO_SD_WIDTH=14.00mm; // this technically is not correct (increased to make a bigger hole because the microSD slot is not centered)
 pub const MICRO_SD_HEIGHT=16.00mm;
@@ -209,7 +213,7 @@ pub part _CaseFrame_AllRails_DisplayWindow() {
 pub part _LicheePcbShim() {
     width = LICHEE_PCB_WIDTH;
     height = LICHEE_PCB_HEIGHT;
-    depth = LICHEE_PCB_DEPTH;
+    depth = PCB_THICKNESS;
     Rect(width, height).extrude(depth).translate(x=0mm, y=0mm, z=0mm);
 }
 
@@ -235,7 +239,7 @@ pub part LicheeShim() {
     inset = 1mm;
     port_offset = half_pcb_height + inset + 0.25mm; // 0.25mm extra to keep the microSD hidden in the case
     sd_offset = half_pcb_height - MICRO_SD_HEIGHT / 2 + inset;
-    // z_offset = -LICHEE_PCB_DEPTH - height / 2;
+    // z_offset = -PCB_THICKNESS - height / 2;
     {UsbCPort().translate(y=port_offset);_LicheePcbShim();_LicheeMicroSdShim().translate(y=sd_offset);}.align(Z).union();
 }
 
@@ -410,6 +414,42 @@ pub part PushButtonHolderCableRail(push_button_total_height=15mm, rail_height=1m
 
 
 
+// 16 x 12
+// holes in 2.6mm
+// usb stand out: 1.3mm
+// total thickness: 4.4mm
+
+pub part _Tp4057PcbShimHole() {
+    radius = 0.75mm;
+    depth = PCB_THICKNESS;
+    Circle(radius).extrude(depth)
+}
+
+pub part _Tp4057PcbShim() {
+    width = TP4057_PCB_WIDTH;
+    height = TP4057_PCB_HEIGHT;
+    depth = PCB_THICKNESS;
+    x1_offset = TP4057_PCB_WIDTH / 2;
+    x2_offset = -x1_offset;
+    y_offset = TP4057_PCB_HEIGHT / 2 - 2.6mm;
+    Rect(width, height).extrude(depth) - _Tp4057PcbShimHole().translate(x=x1_offset,y=y_offset) - _Tp4057PcbShimHole().translate(x=x2_offset,y=y_offset);
+}
+
+pub part Tp4057Shim() {
+    half_pcb_height = TP4057_PCB_HEIGHT / 2;
+    inset = 1.3mm;
+    port_offset = half_pcb_height + inset; // 0.25mm extra to keep the microSD hidden in the case
+    // z_offset = -PCB_THICKNESS - height / 2;
+    {UsbCPort().translate(y=port_offset);_Tp4057PcbShim();}.align(Z).union();
+}
+
+
+Tp4057Shim();
+
+
+
+
+/*
 #[export = "player-case.stl"]
 PrintVersionCase();
 
@@ -422,4 +462,4 @@ PrintVersionActionButton();
 
 #[export = "player-action-button-holder.stl"]
 PrintVersionPushButtonHolder();
-
+*/
