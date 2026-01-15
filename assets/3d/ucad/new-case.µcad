@@ -242,13 +242,44 @@ pub part UsbCPort() {
 }
 
 
+pub part _LicheeCamConnector() {
+    // steg
+    // außen bis usbc: 15.41mm
+    // tiefe: 2mm
+    // breite: 16.7mm
+    // height: 4.32mm from board
+
+    width = 15.41mm;
+    height = 4.32mm;
+    depth = 2mm;
+
+
+    Rect(width, height).extrude(depth);
+
+
+}
+
 pub part LicheeShim() {
+
     half_pcb_height = LICHEE_PCB_HEIGHT / 2;
     inset = 1mm;
     port_offset = half_pcb_height + inset + 0.25mm; // 0.25mm extra to keep the microSD hidden in the case
     sd_offset = half_pcb_height - MICRO_SD_HEIGHT / 2 + inset;
     // z_offset = -PCB_THICKNESS - height / 2;
-    {UsbCPort().translate(y=port_offset);_LicheePcbShim();_LicheeMicroSdShim().translate(y=sd_offset);}.align(Z).union();
+    {
+        {
+            UsbCPort().translate(y=port_offset);
+            _LicheePcbShim();
+            _LicheeMicroSdShim().translate(y=sd_offset);
+
+        }.align(Z);
+
+        // cam connector
+        cam_connect_inset=15.41mm;
+        y_offset=half_pcb_height - cam_connect_inset;
+        z_offset=PCB_THICKNESS / 2;
+        _LicheeCamConnector().rotate(x=90°).translate(y=y_offset,z=z_offset); // y board position
+    }.union();
 }
 
 pub part LicheeShimPositioned() {
@@ -510,26 +541,53 @@ pub part AntennaShimPositioned() {
     AntennaShim().rotate(90°).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
-//
+pub part Max17043ShimPositionedV1() {
+    x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2);
+    y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + 5mm;
+    // z_offset=WALL_THICKNESS + PCB_THICKNESS;
+    z_offset=DISPLAY_FULL_THICKNESS;
+    Max17043Shim().translate(x=x_offset, y=y_offset, z=z_offset);
+}
 
 // tp4057
 // 12 x 6 (0.95pcb thickness)
 
+// LicheeShim();
+
+/*
 
 
-// Max17043Shim();
-
-x_offset=-INNER_WIDTH / 2 + (TP4057_PCB_WIDTH / 2);
+x_offset=-INNER_WIDTH / 2 + (TP4057_PCB_WIDTH / 2) - WALL_THICKNESS/2; // build into the wall
 y_offset=-INNER_HEIGHT / 2 + (TP4057_PCB_HEIGHT / 2);
 z_offset=WALL_THICKNESS + PCB_THICKNESS;
 Tp4057Shim().rotate(x=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
 
+
+
+
+
+x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2) +10mm;
+y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2);
+// z_offset=WALL_THICKNESS + PCB_THICKNESS;
+z_offset=DISPLAY_FULL_THICKNESS;
+// Max17043Shim().rotate(x=180°, z=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
+
+//
+*/
+
+// antenna fits under the licheerv!!
 AntennaShimPositioned();
 
-// LicheeShimPositioned();
+LicheeShimPositioned();
+
 
 #[export = "player-case.stl"]
-PrintVersionCase();
+PrintVersionCase() //.translate(z=-10mm);
+
+
+
+
+
 /*
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
