@@ -96,6 +96,7 @@ pub const ACTION_BUTTON_PIN_DEPTH = 0.3mm;
 
 pub const BOTTOM_PART_HOLDER_WIDTH = INNER_WIDTH / 2 - WALL_THICKNESS;
 pub const BOTTOM_PART_HOLDER_HEIGHT = INNER_HEIGHT - DISPLAY_RAIL_HEIGHT;
+pub const BOTTOM_PART_HOLDER_THICKNESS = PCB_THICKNESS * 2;
 
 
 pub const ANTENNA_WIDTH = 14.2mm;
@@ -434,7 +435,7 @@ pub part PrintVersionPushButtonHolder() {
 
 
 pub part _CaseFrame_AllRails_DisplayWindow_LicheeHoles() {
-    {_CaseFrame_AllRails_DisplayWindow();ActionButtonRowRails();}.union() - LicheeShimPositioned() - ActionButtonRow();
+    {_CaseFrame_AllRails_DisplayWindow();ActionButtonRowRails();_BottomPartHolderBlockPositioned();}.union() - LicheeShimPositioned() - ActionButtonRow() - AntennaShimPositioned() -Tp4057ShimPositioned() - Max17043ShimPositioned();
 }
 
 pub part PushButtonHolderCableRail(push_button_total_height=15mm, rail_height=1mm) {
@@ -526,13 +527,13 @@ pub part AntennaShim() {
     // 14.2mm x 31.63mm (1mm pcb thickness)
     width = ANTENNA_WIDTH;
     height = ANTENNA_HEIGHT;
-    depth = PCB_THICKNESS;
+    depth = PCB_THICKNESS * 2;
     Rect(width, height).extrude(depth);
 }
 
 pub part AntennaShimPositioned() {
-    y_offset=-INNER_HEIGHT / 2 + (ANTENNA_WIDTH / 2); //  + MAX17043_HOLDER_BOTTOM_INSET; // + 14.35mm; // perfect match
-    x_offset=-INNER_WIDTH / 2 + (ANTENNA_HEIGHT / 2); // perfect match
+    y_offset=-INNER_HEIGHT / 2 + BOTTOM_PART_HOLDER_HEIGHT / 2;
+    x_offset=-INNER_WIDTH / 2 + (ANTENNA_HEIGHT / 2);
     z_offset=WALL_THICKNESS;
 
     AntennaShim().rotate(90°).translate(x=x_offset, y=y_offset, z=z_offset);
@@ -541,26 +542,33 @@ pub part AntennaShimPositioned() {
 
 pub part Max17043ShimPositioned() {
     x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2) +10mm;
-    y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + MAX17043_HOLDER_BOTTOM_INSET;
-    // z_offset=WALL_THICKNESS + PCB_THICKNESS;
-    z_offset=DISPLAY_FULL_THICKNESS;
+    // y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2);
+    inset = 0.87mm;
+    y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + BOTTOM_PART_HOLDER_HEIGHT - MAX17043_PCB_HEIGHT + inset;
+    z_offset=WALL_THICKNESS + BOTTOM_PART_HOLDER_THICKNESS;
     Max17043Shim().rotate(x=180°, z=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
 
-pub part BottomPartHolder() {
+pub part _BottomPartHolderBlock() {
     width = BOTTOM_PART_HOLDER_WIDTH;
     height = BOTTOM_PART_HOLDER_HEIGHT;
     depth = PCB_THICKNESS * 2;
     Rect(width, height).extrude(depth);
 }
 
-pub part BottomPartHolderPositioned() {
+pub part _BottomPartHolderBlockPositioned() {
     x_offset=-INNER_WIDTH/2 + BOTTOM_PART_HOLDER_WIDTH / 2;
     y_offset=-INNER_HEIGHT/2 + BOTTOM_PART_HOLDER_HEIGHT / 2;
     z_offset=WALL_THICKNESS;
-    BottomPartHolder().translate(x=x_offset,y=y_offset,z=z_offset);
+    _BottomPartHolderBlock().translate(x=x_offset,y=y_offset,z=z_offset);
 }
+
+/*
+pub part BottomPartHolder() {
+    _BottomPartHolderBlockPositioned() - Tp4057ShimPositioned() - AntennaShimPositioned();
+}
+*/
 
 
 
@@ -569,11 +577,10 @@ pub part BottomPartHolderPositioned() {
 
 // LicheeShim();
 
-BottomPartHolderPositioned() - Tp4057ShimPositioned();
-
+// BottomPartHolder();
 
 // Max17043ShimPositioned();
-// AntennaShimPositioned();
+
 // Tp4057ShimPositioned();
 // LicheeShimPositioned();
 
