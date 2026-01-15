@@ -167,7 +167,7 @@ pub part LicheeCenterSupport() {
 
 pub part LicheeCenterSupportPositioned() {
     x_offset=-WALL_THICKNESS / 2;
-    y_offset=-BOTTOM_PART_HOLDER_HEIGHT - WALL_THICKNESS/2;
+    y_offset=-BOTTOM_PART_HOLDER_HEIGHT - 0.5mm; // WALL_THICKNESS/2;
     LicheeCenterSupport().translate(y=y_offset, x=x_offset);
 }
 
@@ -588,8 +588,6 @@ pub part BottomPartHolder() {
 #[export = "player-case.stl"]
 PrintVersionCase();
 
-/*
-
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
 
@@ -599,4 +597,3 @@ PrintVersionActionButton();
 
 #[export = "player-action-button-holder.stl"]
 PrintVersionPushButtonHolder();
-*/
