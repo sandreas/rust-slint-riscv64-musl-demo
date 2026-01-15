@@ -37,6 +37,9 @@ pub const PCB_THICKNESS=1.00mm;
 
 pub const LICHEE_PCB_WIDTH=22.90mm;
 pub const LICHEE_PCB_HEIGHT=35.60mm;
+pub const LICHEE_CAM_CONNECT_INSET=15.41mm;
+
+
 
 pub const TP4057_PCB_WIDTH=12mm;
 pub const TP4057_PCB_HEIGHT=16mm;
@@ -91,6 +94,8 @@ pub const ACTION_BUTTON_PIN_DEPTH = 0.3mm;
 
 
 
+pub const BOTTOM_PART_HOLDER_WIDTH = INNER_WIDTH / 2 - WALL_THICKNESS;
+pub const BOTTOM_PART_HOLDER_HEIGHT = INNER_HEIGHT - DISPLAY_RAIL_HEIGHT;
 
 
 pub const ANTENNA_WIDTH = 14.2mm;
@@ -153,10 +158,16 @@ pub part BackCover() {
 }
 
 pub part LicheeCenterSupport() {
-    width=2mm;
-    height=3mm;
+    width=WALL_THICKNESS * 2;
+    height=WALL_THICKNESS * 2;
     depth = INNER_DEPTH;
     Rect(width, height).extrude(depth);
+}
+
+pub part LicheeCenterSupportPositioned() {
+    x_offset=-WALL_THICKNESS / 2;
+    y_offset=-BOTTOM_PART_HOLDER_HEIGHT - WALL_THICKNESS/2;
+    LicheeCenterSupport().translate(y=y_offset, x=x_offset);
 }
 
 pub part _DisplayRailHousing() {
@@ -164,7 +175,10 @@ pub part _DisplayRailHousing() {
     height = DISPLAY_RAIL_HEIGHT;
     depth = DISPLAY_FULL_THICKNESS;
 
-    lsupp = LicheeCenterSupport().translate(y=-29.4mm, x=-1mm);
+    lsupp = LicheeCenterSupportPositioned();
+
+
+
     {Rect(width, height).extrude(depth); lsupp}.union();
 }
 
@@ -285,8 +299,7 @@ pub part LicheeShim() {
         }.align(Z);
 
         // cam connector
-        cam_connect_inset=15.41mm;
-        y_offset=half_pcb_height - cam_connect_inset;
+        y_offset=half_pcb_height - LICHEE_CAM_CONNECT_INSET;
         z_offset=PCB_THICKNESS / 2;
         _LicheeCamConnector().rotate(x=90°).translate(y=y_offset,z=z_offset); // y board position
     }.union();
@@ -325,32 +338,6 @@ pub part ActionButton(pin_depth=0mm, pin_radius=PUSH_BUTTON_RADIUS - 0.25mm) {
 
 pub part ActionButtonRotated() {
     ActionButton().rotate(x=90°, y=-90°).align(Z);
-}
-
-pub part PushButtonHolder_old(total_height=15mm, z_offset_extra=0mm) {
-    extra_space = 0.5mm;
-    extra_height = total_height - PUSH_BUTTON_HEIGHT - extra_space;
-    if extra_height < 0mm {
-        extra_height = 0mm;
-    }
-
-
-    width = PUSH_BUTTON_HOLDER_WIDTH;
-    height = PUSH_BUTTON_HEIGHT + extra_space + extra_height;
-    depth = PUSH_BUTTON_DEPTH_KNOB + extra_space;
-    z_offset = extra_space + z_offset_extra;
-
-    holder = Rect(width, height).extrude(depth) - PushButton().translate(z=z_offset);
-
-    x = PUSH_BUTTON_HOLDER_RAIL_WIDTH;
-
-    width = width + x;
-    height = height + extra_space * 2 + 2*x;
-    depth = depth - extra_space;
-    frame = Frame(width, height, extra_space + x)
-            .extrude(depth);
-
-    holder - frame;
 }
 
 pub part _PushButtonHolderRail(total_height=15mm) {
@@ -552,43 +539,29 @@ pub part AntennaShimPositioned() {
 }
 
 
-pub part Max17043ShimPositionedOld() {
-    x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2);
-    y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + 5mm;
-    // z_offset=WALL_THICKNESS + PCB_THICKNESS;
-    z_offset=DISPLAY_FULL_THICKNESS;
-    Max17043Shim().translate(x=x_offset, y=y_offset, z=z_offset);
-}
-
 pub part Max17043ShimPositioned() {
     x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2) +10mm;
     y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + MAX17043_HOLDER_BOTTOM_INSET;
     // z_offset=WALL_THICKNESS + PCB_THICKNESS;
     z_offset=DISPLAY_FULL_THICKNESS;
     Max17043Shim().rotate(x=180°, z=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
-
 }
 
-pub const BOTTOM_PART_HOLDER_WIDTH = INNER_WIDTH / 2 - 2mm;
-pub const BOTTOM_PART_HOLDER_HEIGHT = INNER_HEIGHT - DISPLAY_RAIL_HEIGHT;
 
 pub part BottomPartHolder() {
     width = BOTTOM_PART_HOLDER_WIDTH;
     height = BOTTOM_PART_HOLDER_HEIGHT;
-    depth = PCB_THICKNESS * 2 + 0.3mm;
+    depth = PCB_THICKNESS * 2;
     Rect(width, height).extrude(depth);
 }
 
-/*
+pub part BottomPartHolderPositioned() {
+    x_offset=-INNER_WIDTH/2 + BOTTOM_PART_HOLDER_WIDTH / 2;
+    y_offset=-INNER_HEIGHT/2 + BOTTOM_PART_HOLDER_HEIGHT / 2;
+    z_offset=WALL_THICKNESS;
+    BottomPartHolder().translate(x=x_offset,y=y_offset,z=z_offset);
+}
 
-*/
-
-
-/*
-pub const MAX17043_HOLDER_BOTTOM_INSET=4.35mm;
-pub const MAX17043_HOLDER_TOP_INSET=10mm;
-pub const MAX17043_HOLDER_THICKNESS=PCB_THICKNESS + 0.6mm;
-*/
 
 
 // tp4057
@@ -596,12 +569,7 @@ pub const MAX17043_HOLDER_THICKNESS=PCB_THICKNESS + 0.6mm;
 
 // LicheeShim();
 
-x_offset=-INNER_WIDTH/2 + BOTTOM_PART_HOLDER_WIDTH / 2;
-y_offset=-INNER_HEIGHT/2 + BOTTOM_PART_HOLDER_HEIGHT / 2;
-z_offset=WALL_THICKNESS;
-BottomPartHolder().translate(x=x_offset,y=y_offset,z=z_offset);
-
-
+BottomPartHolderPositioned() - Tp4057ShimPositioned();
 
 
 // Max17043ShimPositioned();
@@ -611,12 +579,9 @@ BottomPartHolder().translate(x=x_offset,y=y_offset,z=z_offset);
 
 
 #[export = "player-case.stl"]
-PrintVersionCase(); //.translate(z=-10mm);
+PrintVersionCase();
 
 /*
-
-
-
 
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
