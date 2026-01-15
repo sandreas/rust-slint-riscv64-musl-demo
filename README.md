@@ -1,3 +1,19 @@
+# ideas
+(88.75mm - 2.5mm) - (56.37mm + 1.25mm) = 28.63
+
+
+INNER_HEIGHT - DISPLAY_RAIL_HEIGHT = 14.35
+
+- Create a rectangle: INNER_WIDTH, 14.35mm.extrude(2*PCB_THICKNESS+0.3mm)
+- Position it on the bottom left (where the TP4057 goes)
+- Substract the TP4057 and the Antenna
+- 
+
+- Center the antenna vertically (14.35mm / 2)
+- Add a spacer with PCB_THICKNESS + 0.3mm on the right part of the lichee holder standoff
+- Increase the holder size for the bottom part to 2 * PCB_THICKNESS + 0.3mm and substract the TP4057
+- 
+
 # rust-slint-riscv64-musl-demo
 A demo for rust slint on riscv64 musl
 

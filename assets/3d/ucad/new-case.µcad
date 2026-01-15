@@ -45,6 +45,13 @@ pub const MAX17043_PCB_WIDTH=10.3mm;
 pub const MAX17043_PCB_HEIGHT=24.5mm;
 pub const MAX17043_PCB_THICKNESS=1.6mm;
 
+pub const MAX17043_HOLDER_BOTTOM_INSET=4.35mm;
+pub const MAX17043_HOLDER_TOP_INSET=10mm;
+pub const MAX17043_HOLDER_THICKNESS=PCB_THICKNESS + 0.6mm;
+
+
+
+
 pub const MICRO_SD_WIDTH=14.00mm; // this technically is not correct (increased to make a bigger hole because the microSD slot is not centered)
 pub const MICRO_SD_HEIGHT=16.00mm;
 pub const MICRO_SD_DEPTH=1.50mm;
@@ -81,6 +88,9 @@ pub const ACTION_BUTTON_BUTTON_DEPTH = WALL_THICKNESS;
 pub const ACTION_BUTTON_DEPTH = ACTION_BUTTON_BASE_DEPTH + ACTION_BUTTON_BUTTON_DEPTH;
 pub const ACTION_BUTTON_RAIL_HEIGHT = OUTER_DEPTH - 2 * WALL_THICKNESS - DISPLAY_FULL_THICKNESS;
 pub const ACTION_BUTTON_PIN_DEPTH = 0.3mm;
+
+
+
 
 
 pub const ANTENNA_WIDTH = 14.2mm;
@@ -490,8 +500,14 @@ pub part Tp4057Shim() {
 }
 
 pub part Tp4057ShimPositioned() {
-    Tp4057Shim();
+    x_offset=-INNER_WIDTH / 2 + (TP4057_PCB_WIDTH / 2) - WALL_THICKNESS/2; // build into the wall
+    y_offset=-INNER_HEIGHT / 2 + (TP4057_PCB_HEIGHT / 2);
+    z_offset=WALL_THICKNESS + PCB_THICKNESS;
+    Tp4057Shim().rotate(x=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
 }
+
+
+
 
 pub part _Max17043PcbShim() {
     width = MAX17043_PCB_WIDTH;
@@ -528,20 +544,15 @@ pub part AntennaShim() {
 }
 
 pub part AntennaShimPositioned() {
-    // hochkant (zu lang)
-    y_offset=-INNER_HEIGHT / 2 + (ANTENNA_HEIGHT / 2);
-    x_offset=-INNER_WIDTH / 2 + (ANTENNA_WIDTH / 2);
-    z_offset=WALL_THICKNESS;
-
-    // quer (passt)
-    y_offset=-INNER_HEIGHT / 2 + (ANTENNA_WIDTH / 2); // perfect match
+    y_offset=-INNER_HEIGHT / 2 + (ANTENNA_WIDTH / 2); //  + MAX17043_HOLDER_BOTTOM_INSET; // + 14.35mm; // perfect match
     x_offset=-INNER_WIDTH / 2 + (ANTENNA_HEIGHT / 2); // perfect match
     z_offset=WALL_THICKNESS;
 
     AntennaShim().rotate(90°).translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
-pub part Max17043ShimPositionedV1() {
+
+pub part Max17043ShimPositionedOld() {
     x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2);
     y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + 5mm;
     // z_offset=WALL_THICKNESS + PCB_THICKNESS;
@@ -549,46 +560,64 @@ pub part Max17043ShimPositionedV1() {
     Max17043Shim().translate(x=x_offset, y=y_offset, z=z_offset);
 }
 
+pub part Max17043ShimPositioned() {
+    x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2) +10mm;
+    y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2) + MAX17043_HOLDER_BOTTOM_INSET;
+    // z_offset=WALL_THICKNESS + PCB_THICKNESS;
+    z_offset=DISPLAY_FULL_THICKNESS;
+    Max17043Shim().rotate(x=180°, z=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
+
+}
+
+pub const BOTTOM_PART_HOLDER_WIDTH = INNER_WIDTH / 2 - 2mm;
+pub const BOTTOM_PART_HOLDER_HEIGHT = INNER_HEIGHT - DISPLAY_RAIL_HEIGHT;
+
+pub part BottomPartHolder() {
+    width = BOTTOM_PART_HOLDER_WIDTH;
+    height = BOTTOM_PART_HOLDER_HEIGHT;
+    depth = PCB_THICKNESS * 2 + 0.3mm;
+    Rect(width, height).extrude(depth);
+}
+
+/*
+
+*/
+
+
+/*
+pub const MAX17043_HOLDER_BOTTOM_INSET=4.35mm;
+pub const MAX17043_HOLDER_TOP_INSET=10mm;
+pub const MAX17043_HOLDER_THICKNESS=PCB_THICKNESS + 0.6mm;
+*/
+
+
 // tp4057
 // 12 x 6 (0.95pcb thickness)
 
 // LicheeShim();
 
-/*
-
-
-x_offset=-INNER_WIDTH / 2 + (TP4057_PCB_WIDTH / 2) - WALL_THICKNESS/2; // build into the wall
-y_offset=-INNER_HEIGHT / 2 + (TP4057_PCB_HEIGHT / 2);
-z_offset=WALL_THICKNESS + PCB_THICKNESS;
-Tp4057Shim().rotate(x=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
+x_offset=-INNER_WIDTH/2 + BOTTOM_PART_HOLDER_WIDTH / 2;
+y_offset=-INNER_HEIGHT/2 + BOTTOM_PART_HOLDER_HEIGHT / 2;
+z_offset=WALL_THICKNESS;
+BottomPartHolder().translate(x=x_offset,y=y_offset,z=z_offset);
 
 
 
 
-
-x_offset=-INNER_WIDTH / 2 + (MAX17043_PCB_WIDTH / 2) +10mm;
-y_offset=-INNER_HEIGHT / 2 + (MAX17043_PCB_HEIGHT / 2);
-// z_offset=WALL_THICKNESS + PCB_THICKNESS;
-z_offset=DISPLAY_FULL_THICKNESS;
-// Max17043Shim().rotate(x=180°, z=180°).align(Z).translate(x=x_offset, y=y_offset, z=z_offset);
-
-//
-*/
-
-// antenna fits under the licheerv!!
-AntennaShimPositioned();
-
-LicheeShimPositioned();
+// Max17043ShimPositioned();
+// AntennaShimPositioned();
+// Tp4057ShimPositioned();
+// LicheeShimPositioned();
 
 
 #[export = "player-case.stl"]
-PrintVersionCase() //.translate(z=-10mm);
-
-
-
-
+PrintVersionCase(); //.translate(z=-10mm);
 
 /*
+
+
+
+
 #[export = "player-backcover.stl"]
 PrintVersionBackCover();
 
